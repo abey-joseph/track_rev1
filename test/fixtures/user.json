@@ -1,0 +1,7 @@
+{
+  "uid": "test-uid-123",
+  "email": "test@example.com",
+  "displayName": "Test User",
+  "photoUrl": null,
+  "isAnonymous": false
+}
