@@ -15,8 +15,8 @@ import '../../../../helpers/test_helpers.dart';
 void main() {
   late AuthBloc bloc;
   late MockSignInWithEmail mockSignInWithEmail;
+  late MockCreateAccountWithEmail mockCreateAccountWithEmail;
   late MockSignInWithGoogle mockSignInWithGoogle;
-  late MockSignInWithApple mockSignInWithApple;
   late MockSignInAnonymously mockSignInAnonymously;
   late MockSignOut mockSignOut;
   late MockGetCurrentUser mockGetCurrentUser;
@@ -29,16 +29,16 @@ void main() {
 
   setUp(() {
     mockSignInWithEmail = MockSignInWithEmail();
+    mockCreateAccountWithEmail = MockCreateAccountWithEmail();
     mockSignInWithGoogle = MockSignInWithGoogle();
-    mockSignInWithApple = MockSignInWithApple();
     mockSignInAnonymously = MockSignInAnonymously();
     mockSignOut = MockSignOut();
     mockGetCurrentUser = MockGetCurrentUser();
 
     bloc = AuthBloc(
       mockSignInWithEmail,
+      mockCreateAccountWithEmail,
       mockSignInWithGoogle,
-      mockSignInWithApple,
       mockSignInAnonymously,
       mockSignOut,
       mockGetCurrentUser,

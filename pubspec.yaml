@@ -38,7 +38,6 @@ dependencies:
   path: ^1.9.1
   path_provider: ^2.1.5
   permission_handler: ^11.3.1
-  sign_in_with_apple: ^6.1.4
   sqlite3_flutter_libs: ^0.5.28
   talker: ^4.7.0
   talker_bloc_logger: ^4.7.0

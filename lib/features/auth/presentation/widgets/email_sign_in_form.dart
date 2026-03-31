@@ -17,6 +17,7 @@ class _EmailSignInFormState extends State<EmailSignInForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isSignUp = true;
 
   @override
   void dispose() {
@@ -27,12 +28,24 @@ class _EmailSignInFormState extends State<EmailSignInForm> {
 
   void _onSubmit() {
     if (_formKey.currentState?.validate() ?? false) {
-      context.read<AuthBloc>().add(
-        AuthEvent.signInWithEmailRequested(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        ),
-      );
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      if (_isSignUp) {
+        context.read<AuthBloc>().add(
+          AuthEvent.createAccountWithEmailRequested(
+            email: email,
+            password: password,
+          ),
+        );
+      } else {
+        context.read<AuthBloc>().add(
+          AuthEvent.signInWithEmailRequested(
+            email: email,
+            password: password,
+          ),
+        );
+      }
     }
   }
 
@@ -69,11 +82,20 @@ class _EmailSignInFormState extends State<EmailSignInForm> {
             builder: (context, state) {
               final isLoading = state is AuthLoading;
               return AppButton(
-                label: 'Sign In',
+                label: _isSignUp ? 'Create Account' : 'Sign In',
                 isLoading: isLoading,
                 onPressed: _onSubmit,
               );
             },
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => setState(() => _isSignUp = !_isSignUp),
+            child: Text(
+              _isSignUp
+                  ? 'Already have an account? Sign In'
+                  : "Don't have an account? Create one",
+            ),
           ),
         ],
       ),

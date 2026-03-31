@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:track/core/error/exceptions.dart';
 import 'package:track/features/auth/data/models/user_dto.dart';
 
@@ -21,8 +20,6 @@ abstract class AuthRemoteDataSource {
   });
 
   Future<UserDto> signInWithGoogle();
-
-  Future<UserDto> signInWithApple();
 
   Future<UserDto> signInAnonymously();
 
@@ -106,34 +103,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on firebase.FirebaseAuthException catch (e) {
       throw ServerException(
         message: e.message ?? 'Google sign-in failed',
-        statusCode: _mapAuthErrorCode(e.code),
-      );
-    }
-  }
-
-  @override
-  Future<UserDto> signInWithApple() async {
-    try {
-      final appleCredential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
-
-      final oAuthProvider = firebase.OAuthProvider('apple.com');
-      final credential = oAuthProvider.credential(
-        idToken: appleCredential.identityToken,
-        accessToken: appleCredential.authorizationCode,
-      );
-
-      final userCredential = await _firebaseAuth.signInWithCredential(
-        credential,
-      );
-      return _mapFirebaseUser(userCredential.user!);
-    } on firebase.FirebaseAuthException catch (e) {
-      throw ServerException(
-        message: e.message ?? 'Apple sign-in failed',
         statusCode: _mapAuthErrorCode(e.code),
       );
     }

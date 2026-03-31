@@ -47,6 +47,7 @@ class TrackApp extends StatelessWidget {
     return BlocProvider(
       create: (_) => getIt<AuthBloc>(),
       child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
         title: AppConstants.appName,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

@@ -1,9 +1,9 @@
 import 'package:bloc/bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:track/core/usecases/usecase.dart';
+import 'package:track/features/auth/domain/usecases/create_account_with_email.dart';
 import 'package:track/features/auth/domain/usecases/get_current_user.dart';
 import 'package:track/features/auth/domain/usecases/sign_in_anonymously.dart';
-import 'package:track/features/auth/domain/usecases/sign_in_with_apple.dart';
 import 'package:track/features/auth/domain/usecases/sign_in_with_email.dart';
 import 'package:track/features/auth/domain/usecases/sign_in_with_google.dart';
 import 'package:track/features/auth/domain/usecases/sign_out.dart';
@@ -14,15 +14,14 @@ import 'package:track/features/auth/presentation/bloc/auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc(
     this._signInWithEmail,
+    this._createAccountWithEmail,
     this._signInWithGoogle,
-    this._signInWithApple,
     this._signInAnonymously,
     this._signOut,
     this._getCurrentUser,
   ) : super(const AuthState.initial()) {
     on<SignInWithEmailRequested>(_onSignInWithEmail);
     on<SignInWithGoogleRequested>(_onSignInWithGoogle);
-    on<SignInWithAppleRequested>(_onSignInWithApple);
     on<SignInAnonymouslyRequested>(_onSignInAnonymously);
     on<SignOutRequested>(_onSignOut);
     on<AuthCheckRequested>(_onAuthCheck);
@@ -30,8 +29,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   final SignInWithEmail _signInWithEmail;
+  final CreateAccountWithEmail _createAccountWithEmail;
   final SignInWithGoogle _signInWithGoogle;
-  final SignInWithApple _signInWithApple;
   final SignInAnonymously _signInAnonymously;
   final SignOut _signOut;
   final GetCurrentUser _getCurrentUser;
@@ -56,18 +55,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthState.loading());
     final result = await _signInWithGoogle(NoParams());
-    result.fold(
-      (failure) => emit(AuthState.error(failure: failure)),
-      (user) => emit(AuthState.authenticated(user: user)),
-    );
-  }
-
-  Future<void> _onSignInWithApple(
-    SignInWithAppleRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(const AuthState.loading());
-    final result = await _signInWithApple(NoParams());
     result.fold(
       (failure) => emit(AuthState.error(failure: failure)),
       (user) => emit(AuthState.authenticated(user: user)),
@@ -112,7 +99,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(const AuthState.loading());
-    final result = await _signInWithEmail(
+    final result = await _createAccountWithEmail(
       SignInWithEmailParams(email: event.email, password: event.password),
     );
     result.fold(

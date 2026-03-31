@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -80,17 +78,6 @@ class LoginPage extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 12),
-                if (Platform.isIOS) ...[
-                  SocialSignInButton(
-                    label: 'Continue with Apple',
-                    icon: Icons.apple,
-                    onPressed:
-                        () => context.read<AuthBloc>().add(
-                          const AuthEvent.signInWithAppleRequested(),
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
                 BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, state) {
                     final isLoading = state is AuthLoading;

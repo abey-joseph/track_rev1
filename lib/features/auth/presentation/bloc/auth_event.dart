@@ -12,8 +12,6 @@ sealed class AuthEvent with _$AuthEvent {
   const factory AuthEvent.signInWithGoogleRequested() =
       SignInWithGoogleRequested;
 
-  const factory AuthEvent.signInWithAppleRequested() = SignInWithAppleRequested;
-
   const factory AuthEvent.signInAnonymouslyRequested() =
       SignInAnonymouslyRequested;
 

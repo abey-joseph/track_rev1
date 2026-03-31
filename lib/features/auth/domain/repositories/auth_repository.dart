@@ -14,8 +14,6 @@ abstract class AuthRepository {
 
   Future<Either<Failure, UserEntity>> signInWithGoogle();
 
-  Future<Either<Failure, UserEntity>> signInWithApple();
-
   Future<Either<Failure, UserEntity>> signInAnonymously();
 
   Future<Either<Failure, Unit>> signOut();

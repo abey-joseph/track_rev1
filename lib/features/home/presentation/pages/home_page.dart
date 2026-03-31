@@ -2,8 +2,10 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:track/core/extensions/context_extensions.dart';
+import 'package:track/core/router/app_router.gr.dart';
 import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:track/features/auth/presentation/bloc/auth_event.dart';
+import 'package:track/features/auth/presentation/bloc/auth_state.dart';
 
 @RoutePage()
 class HomePage extends StatelessWidget {
@@ -11,23 +13,32 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Track'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed:
-                () => context.read<AuthBloc>().add(
-                  const AuthEvent.signOutRequested(),
-                ),
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        state.whenOrNull(
+          unauthenticated: () {
+            context.router.replaceAll([const LoginRoute()]);
+          },
+        );
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Track'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed:
+                  () => context.read<AuthBloc>().add(
+                    const AuthEvent.signOutRequested(),
+                  ),
+            ),
+          ],
+        ),
+        body: Center(
+          child: Text(
+            'Welcome to Track!',
+            style: context.textTheme.headlineMedium,
           ),
-        ],
-      ),
-      body: Center(
-        child: Text(
-          'Welcome to Track!',
-          style: context.textTheme.headlineMedium,
         ),
       ),
     );

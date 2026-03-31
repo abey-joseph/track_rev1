@@ -55,20 +55,6 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, UserEntity>> signInWithApple() async {
-    try {
-      final dto = await _remoteDataSource.signInWithApple();
-      return Right(dto.toEntity());
-    } on ServerException catch (e) {
-      return Left(
-        Failure.auth(message: e.message, code: e.statusCode?.toString()),
-      );
-    } on Exception catch (e) {
-      return Left(Failure.unexpected(message: e.toString()));
-    }
-  }
-
-  @override
   Future<Either<Failure, UserEntity>> signInAnonymously() async {
     try {
       final dto = await _remoteDataSource.signInAnonymously();
