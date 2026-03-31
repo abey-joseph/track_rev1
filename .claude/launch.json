@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Flutter Dev",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": ["run", "--dart-define=ENV=dev"],
+      "port": 8080
+    },
+    {
+      "name": "Flutter Prod",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": ["run", "--dart-define=ENV=prod"],
+      "port": 8080
+    },
+    {
+      "name": "Build Runner Watch",
+      "runtimeExecutable": "dart",
+      "runtimeArgs": ["run", "build_runner", "watch", "--delete-conflicting-outputs"],
+      "port": 0
+    }
+  ]
+}

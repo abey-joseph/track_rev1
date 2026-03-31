@@ -10,12 +10,13 @@ import 'package:track/core/constants/app_constants.dart';
 import 'package:track/core/router/app_router.dart';
 import 'package:track/core/theme/app_theme.dart';
 import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:track/firebase_options.dart';
 import 'package:track/injection.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   const env = String.fromEnvironment(
     AppConstants.envKey,
