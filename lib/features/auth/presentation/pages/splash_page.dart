@@ -69,18 +69,18 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 2400),
     );
 
-    _entryController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _minTimePassed = true;
-        _navigateIfReady();
-        // If auth isn't done yet, start pulsing
-        if (_pendingState == null || _isWaiting(_pendingState!)) {
-          _pulseController.repeat(reverse: true);
+    _entryController
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _minTimePassed = true;
+          _navigateIfReady();
+          // If auth isn't done yet, start pulsing
+          if (_pendingState == null || _isWaiting(_pendingState!)) {
+            _pulseController.repeat(reverse: true);
+          }
         }
-      }
-    });
-
-    _entryController.forward();
+      })
+      ..forward();
     context.read<AuthBloc>().add(const AuthEvent.authCheckRequested());
   }
 
@@ -102,7 +102,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       initial: () {},
       loading: () {},
       authenticated: (_) {
-        context.router.replaceAll([const HomeRoute()]);
+        context.router.replaceAll([const AppShellRoute()]);
       },
       unauthenticated: () {
         context.router.replaceAll([const LoginRoute()]);
