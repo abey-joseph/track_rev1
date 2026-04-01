@@ -13,6 +13,11 @@ abstract class DatabaseModule {
   Future<AppDatabase> get database async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'track.db'));
-    return AppDatabase(NativeDatabase.createInBackground(file));
+    return AppDatabase(
+      NativeDatabase.createInBackground(
+        file,
+        setup: (db) => db.execute('PRAGMA foreign_keys = ON'),
+      ),
+    );
   }
 }

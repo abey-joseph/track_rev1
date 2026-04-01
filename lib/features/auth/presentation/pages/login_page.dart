@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lottie/lottie.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/core/router/app_router.gr.dart';
 import 'package:track/core/widgets/app_button.dart';
@@ -34,7 +35,14 @@ class LoginPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 48),
+                const SizedBox(height: 24),
+                Lottie.asset(
+                  'assets/images/login_animation.json',
+                  height: 200,
+                  fit: BoxFit.contain,
+                  repeat: true,
+                ),
+                const SizedBox(height: 16),
                 Text(
                   'Track',
                   style: context.textTheme.headlineLarge?.copyWith(
@@ -50,7 +58,7 @@ class LoginPage extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 32),
                 const EmailSignInForm(),
                 const SizedBox(height: 24),
                 Row(
