@@ -234,6 +234,6 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
       query.where((t) => t.categoryId.equals(categoryId));
     }
     final rows = await query.get();
-    return rows.fold(0, (sum, t) => sum + t.amount);
+    return rows.fold<int>(0, (sum, t) => sum + t.amount);
   }
 }

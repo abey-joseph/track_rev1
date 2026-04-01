@@ -133,7 +133,7 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
         for (final date in sortedDates) {
           if (date == cursor) {
             current++;
-            cursor = _previousDayIso(cursor);
+            cursor = _previousDayIso(cursor!);
           } else {
             break;
           }

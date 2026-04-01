@@ -21,7 +21,7 @@ class LoginPage extends StatelessWidget {
       listener: (context, state) {
         state.whenOrNull(
           authenticated: (user) {
-            context.router.replaceAll([const HomeRoute()]);
+            context.router.replaceAll([const AppShellRoute()]);
           },
           error: (failure) {
             context.showSnackBar(failure.toString(), isError: true);
@@ -38,7 +38,7 @@ class LoginPage extends StatelessWidget {
                 const SizedBox(height: 24),
                 Lottie.asset(
                   'assets/images/login_animation.json',
-                  height: 200,
+                  height: 150,
                   fit: BoxFit.contain,
                   repeat: true,
                 ),
