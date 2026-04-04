@@ -13,4 +13,15 @@ sealed class HabitsEvent with _$HabitsEvent {
     required int habitId,
     required String date,
   }) = HabitsToggleLog;
+
+  const factory HabitsEvent.logValue({
+    required int habitId,
+    required String date,
+    required double value,
+  }) = HabitsLogValue;
+
+  const factory HabitsEvent.deleteLog({
+    required int habitId,
+    required String date,
+  }) = HabitsDeleteLog;
 }

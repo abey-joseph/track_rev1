@@ -18,4 +18,15 @@ abstract class HabitsRepository {
     required int habitId,
     required String date,
   });
+
+  Future<Either<Failure, Unit>> logHabitValue({
+    required int habitId,
+    required String date,
+    required double value,
+  });
+
+  Future<Either<Failure, Unit>> deleteHabitLog({
+    required int habitId,
+    required String date,
+  });
 }

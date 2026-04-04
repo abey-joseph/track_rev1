@@ -93,15 +93,23 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
   /// consistent.
   Future<void> _recalculateStreak(int habitId) async {
     await transaction(() async {
-      // Only count logs with value >= 1.0 as completions for streaks.
+      final habit = await getHabitById(habitId);
+      final threshold = habit?.targetValue ?? 1.0;
+      final isMaxType = habit?.targetType == 'max';
+      final isWeekly = habit?.frequencyType == 'weekly';
       final allLogs =
           await (select(habitLogs)
                 ..where((l) => l.habitId.equals(habitId))
                 ..orderBy([(l) => OrderingTerm.desc(l.loggedDate)]))
               .get();
-      final logs = allLogs.where((l) => l.value >= 1.0).toList();
 
-      if (logs.isEmpty) {
+      bool _isCompleted(double value) {
+        return isMaxType ? value <= threshold : value >= threshold;
+      }
+
+      final completedLogs = allLogs.where((l) => _isCompleted(l.value)).toList();
+
+      if (completedLogs.isEmpty) {
         await into(habitStreaks).insertOnConflictUpdate(
           HabitStreaksCompanion(
             habitId: Value(habitId),
@@ -115,40 +123,103 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
         return;
       }
 
-      final sortedDates = logs.map((l) => l.loggedDate).toList();
-      final today = _todayIso();
-      final yesterday = _offsetDayIso(-1);
+      int current;
+      int longest;
+      final totalCompletions = completedLogs.length;
+      final lastCompletedDate = completedLogs.first.loggedDate;
 
-      var current = 0;
-      // Streak starts from today or yesterday (allow for today not yet logged).
-      var cursor =
-          sortedDates.first == today || sortedDates.first == yesterday
-              ? sortedDates.first
-              : null;
+      if (isWeekly) {
+        // Weekly streak: count consecutive completed weeks
+        final frequencyDays = _parseDays(habit?.frequencyDays ?? '[1,2,3,4,5,6,7]');
+        final completedDates = completedLogs.map((l) => l.loggedDate).toSet();
 
-      if (cursor != null) {
-        for (final date in sortedDates) {
-          if (date == cursor) {
-            current++;
-            cursor = _previousDayIso(cursor!);
-          } else {
-            break;
+        final todayDate = DateTime.parse(_todayIso());
+        final currentMonday = _mondayOfWeek(todayDate);
+
+        // Check if a given week is fully completed
+        bool isWeekCompleted(DateTime monday) {
+          var scheduled = 0;
+          var completed = 0;
+          for (var d = 0; d < 7; d++) {
+            final day = monday.add(Duration(days: d));
+            if (frequencyDays.contains(day.weekday)) {
+              scheduled++;
+              if (completedDates.contains(_formatIso(day))) {
+                completed++;
+              }
+            }
+          }
+          return scheduled > 0 && completed >= scheduled;
+        }
+
+        // Current streak (from current or previous week backwards)
+        current = 0;
+        var weekCursor = currentMonday;
+        // Allow current week to not count if not yet completed
+        if (!isWeekCompleted(weekCursor)) {
+          weekCursor = weekCursor.subtract(const Duration(days: 7));
+        }
+        while (isWeekCompleted(weekCursor)) {
+          current++;
+          weekCursor = weekCursor.subtract(const Duration(days: 7));
+        }
+
+        // Longest streak: scan all weeks that have any logs
+        final allDates = allLogs.map((l) => DateTime.parse(l.loggedDate)).toList();
+        if (allDates.isEmpty) {
+          longest = 0;
+        } else {
+          allDates.sort();
+          final firstMonday = _mondayOfWeek(allDates.first);
+          final lastMonday = _mondayOfWeek(allDates.last);
+          longest = 0;
+          var run = 0;
+          var w = firstMonday;
+          while (!w.isAfter(lastMonday)) {
+            if (isWeekCompleted(w)) {
+              run++;
+              if (run > longest) longest = run;
+            } else {
+              run = 0;
+            }
+            w = w.add(const Duration(days: 7));
           }
         }
-      }
+      } else {
+        // Daily streak calculation (unchanged logic)
+        final sortedDates = completedLogs.map((l) => l.loggedDate).toList();
+        final today = _todayIso();
+        final yesterday = _offsetDayIso(-1);
 
-      // Longest streak — scan all logs.
-      var longest = 0;
-      var run = 0;
-      String? prev;
-      for (final date in sortedDates.reversed) {
-        if (prev == null || date == _nextDayIso(prev)) {
-          run++;
-          if (run > longest) longest = run;
-        } else {
-          run = 1;
+        current = 0;
+        var cursor =
+            sortedDates.first == today || sortedDates.first == yesterday
+                ? sortedDates.first
+                : null;
+
+        if (cursor != null) {
+          for (final date in sortedDates) {
+            if (date == cursor) {
+              current++;
+              cursor = _previousDayIso(cursor!);
+            } else {
+              break;
+            }
+          }
         }
-        prev = date;
+
+        longest = 0;
+        var run = 0;
+        String? prev;
+        for (final date in sortedDates.reversed) {
+          if (prev == null || date == _nextDayIso(prev)) {
+            run++;
+            if (run > longest) longest = run;
+          } else {
+            run = 1;
+          }
+          prev = date;
+        }
       }
 
       final existing = await getStreak(habitId);
@@ -159,12 +230,28 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
           habitId: Value(habitId),
           currentStreak: Value(current),
           longestStreak: Value(longest > prevLongest ? longest : prevLongest),
-          lastCompletedDate: Value(sortedDates.first),
-          totalCompletions: Value(logs.length),
+          lastCompletedDate: Value(lastCompletedDate),
+          totalCompletions: Value(totalCompletions),
           updatedAt: Value(DateTime.now()),
         ),
       );
     });
+  }
+
+  static DateTime _mondayOfWeek(DateTime date) {
+    return date.subtract(Duration(days: date.weekday - 1));
+  }
+
+  static List<int> _parseDays(String raw) {
+    try {
+      final decoded =
+          (raw.startsWith('['))
+              ? (raw.substring(1, raw.length - 1)).split(',').map((s) => int.parse(s.trim())).toList()
+              : [1, 2, 3, 4, 5, 6, 7];
+      return decoded;
+    } catch (_) {
+      return [1, 2, 3, 4, 5, 6, 7];
+    }
   }
 
   // ── Date helpers ─────────────────────────────────────────────────────────

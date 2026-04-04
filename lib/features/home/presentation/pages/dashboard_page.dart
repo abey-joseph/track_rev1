@@ -5,6 +5,7 @@ import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/core/router/app_router.gr.dart';
 import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:track/features/auth/presentation/bloc/auth_state.dart';
+import 'package:track/features/habits/domain/entities/habit_with_details.dart';
 import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
 import 'package:track/features/habits/presentation/bloc/habits_event.dart';
 import 'package:track/features/habits/presentation/bloc/habits_state.dart';
@@ -13,6 +14,7 @@ import 'package:track/features/home/presentation/widgets/ai_insight_card.dart';
 import 'package:track/features/home/presentation/widgets/recent_activity_feed.dart';
 import 'package:track/features/home/presentation/widgets/spending_summary_card.dart';
 import 'package:track/features/home/presentation/widgets/streak_score_card.dart';
+import 'package:track/features/habits/presentation/widgets/measurable_log_sheet.dart';
 import 'package:track/features/home/presentation/widgets/today_habits_section.dart';
 import 'package:intl/intl.dart';
 import 'package:track/injection.dart';
@@ -27,8 +29,10 @@ class DashboardPage extends StatelessWidget {
     final userId = authState is Authenticated ? authState.user.uid : '';
 
     return BlocProvider(
-      create: (_) =>
-          getIt<HabitsBloc>()..add(HabitsEvent.loadRequested(userId: userId)),
+      create:
+          (_) =>
+              getIt<HabitsBloc>()
+                ..add(HabitsEvent.loadRequested(userId: userId)),
       child: const _DashboardView(),
     );
   }
@@ -93,18 +97,22 @@ class _DashboardView extends StatelessWidget {
             builder: (context, state) {
               if (state is HabitsLoaded) {
                 final todayWeekday = now.weekday;
-                final todayHabits = state.habits
-                    .where(
-                      (h) => h.habit.frequencyDays.contains(todayWeekday),
-                    )
-                    .toList();
-                final completed = todayHabits
-                    .where(
-                      (h) => h.recentLogs.any(
-                        (l) => l.loggedDate == todayIso && l.value >= 1.0,
-                      ),
-                    )
-                    .length;
+                final todayHabits =
+                    state.habits
+                        .where(
+                          (h) => h.habit.frequencyDays.contains(todayWeekday),
+                        )
+                        .toList();
+                final completed =
+                    todayHabits
+                        .where(
+                          (h) => h.recentLogs.any(
+                            (l) =>
+                                l.loggedDate == todayIso &&
+                                l.value >= h.habit.targetValue,
+                          ),
+                        )
+                        .length;
                 final bestStreak = state.habits.fold<int>(
                   0,
                   (max, h) =>
@@ -133,37 +141,88 @@ class _DashboardView extends StatelessWidget {
               final List<HabitItem> habitItems;
               if (state is HabitsLoaded) {
                 final todayWeekday = now.weekday;
-                habitItems = state.habits
-                    .where(
-                      (h) => h.habit.frequencyDays.contains(todayWeekday),
-                    )
-                    .map((h) {
-                      final isCompleted = h.recentLogs.any(
-                        (l) => l.loggedDate == todayIso && l.value >= 1.0,
-                      );
-                      return HabitItem(
-                        id: h.habit.id.toString(),
-                        name: h.habit.name,
-                        icon: resolveHabitIcon(h.habit.iconName),
-                        color: _parseColor(h.habit.colorHex),
-                        isCompleted: isCompleted,
-                        subtitle: h.habit.targetUnit,
-                      );
-                    })
-                    .toList();
+                habitItems =
+                    state.habits
+                        .where(
+                          (h) => h.habit.frequencyDays.contains(todayWeekday),
+                        )
+                        .map((h) {
+                          final isCompleted = h.recentLogs.any(
+                            (l) =>
+                                l.loggedDate == todayIso &&
+                                l.value >= h.habit.targetValue,
+                          );
+                          return HabitItem(
+                            id: h.habit.id.toString(),
+                            name: h.habit.name,
+                            icon: resolveHabitIcon(h.habit.iconName),
+                            color: _parseColor(h.habit.colorHex),
+                            isCompleted: isCompleted,
+                            subtitle: h.habit.targetUnit,
+                          );
+                        })
+                        .toList();
               } else {
                 habitItems = [];
               }
 
+              // Build a lookup for measurable habit info
+              final habitMap = state is HabitsLoaded
+                  ? {
+                      for (final h in state.habits)
+                        h.habit.id.toString(): h,
+                    }
+                  : <String, HabitWithDetails>{};
+
               return TodayHabitsSection(
                 habits: habitItems,
-                onToggle: (id) {
-                  context.read<HabitsBloc>().add(
-                        HabitsEvent.toggleLog(
+                onToggle: (id) async {
+                  final h = habitMap[id];
+                  if (h != null && h.habit.targetValue > 1.0) {
+                    // Measurable habit: show bottom sheet
+                    final todayLog =
+                        h.recentLogs
+                            .where((l) => l.loggedDate == todayIso)
+                            .firstOrNull;
+                    final result =
+                        await showModalBottomSheet<MeasurableLogResult>(
+                          context: context,
+                          isScrollControlled: true,
+                          builder:
+                              (_) => MeasurableLogSheet(
+                                habitName: h.habit.name,
+                                targetValue: h.habit.targetValue,
+                                targetUnit: h.habit.targetUnit,
+                                targetType: h.habit.targetType,
+                                currentValue: todayLog?.value,
+                              ),
+                        );
+                    if (result == null || !context.mounted) return;
+                    if (result.delete) {
+                      context.read<HabitsBloc>().add(
+                        HabitsEvent.deleteLog(
                           habitId: int.parse(id),
                           date: todayIso,
                         ),
                       );
+                    } else if (result.value != null) {
+                      context.read<HabitsBloc>().add(
+                        HabitsEvent.logValue(
+                          habitId: int.parse(id),
+                          date: todayIso,
+                          value: result.value!,
+                        ),
+                      );
+                    }
+                  } else {
+                    // Yes/No habit: existing toggle
+                    context.read<HabitsBloc>().add(
+                      HabitsEvent.toggleLog(
+                        habitId: int.parse(id),
+                        date: todayIso,
+                      ),
+                    );
+                  }
                 },
                 onSeeAll: () {
                   AutoTabsRouter.of(context).setActiveIndex(1);

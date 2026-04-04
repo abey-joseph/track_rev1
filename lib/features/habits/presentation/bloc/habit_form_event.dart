@@ -29,6 +29,10 @@ sealed class HabitFormEvent with _$HabitFormEvent {
     required double targetValue,
   }) = HabitFormTargetValueChanged;
 
+  const factory HabitFormEvent.targetTypeChanged({
+    required HabitTargetType targetType,
+  }) = HabitFormTargetTypeChanged;
+
   const factory HabitFormEvent.targetUnitChanged({required String targetUnit}) =
       HabitFormTargetUnitChanged;
 

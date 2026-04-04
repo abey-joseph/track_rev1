@@ -13,6 +13,7 @@ abstract class HabitFormState with _$HabitFormState {
     @Default(HabitFrequency.daily) HabitFrequency frequencyType,
     @Default([1, 2, 3, 4, 5, 6, 7]) List<int> frequencyDays,
     @Default(1.0) double targetValue,
+    @Default(HabitTargetType.min) HabitTargetType targetType,
     @Default('') String targetUnit,
     @Default(false) bool reminderEnabled,
     @Default('08:00') String reminderTime,

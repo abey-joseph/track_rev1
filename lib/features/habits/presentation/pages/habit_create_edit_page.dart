@@ -643,7 +643,8 @@ class _TargetSection extends StatelessWidget {
       buildWhen:
           (prev, curr) =>
               prev.targetValue != curr.targetValue ||
-              prev.targetUnit != curr.targetUnit,
+              prev.targetUnit != curr.targetUnit ||
+              prev.targetType != curr.targetType,
       builder: (context, state) {
         final isQuantitative = state.targetValue > 1.0;
 
@@ -701,6 +702,46 @@ class _TargetSection extends StatelessWidget {
                     ],
                   ),
                   if (isQuantitative) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _GoalTypeChip(
+                            label: 'At least',
+                            subtitle: 'Minimum target',
+                            icon: Icons.arrow_upward_rounded,
+                            isSelected:
+                                state.targetType == HabitTargetType.min,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              context.read<HabitFormBloc>().add(
+                                const HabitFormEvent.targetTypeChanged(
+                                  targetType: HabitTargetType.min,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _GoalTypeChip(
+                            label: 'At most',
+                            subtitle: 'Maximum target',
+                            icon: Icons.arrow_downward_rounded,
+                            isSelected:
+                                state.targetType == HabitTargetType.max,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              context.read<HabitFormBloc>().add(
+                                const HabitFormEvent.targetTypeChanged(
+                                  targetType: HabitTargetType.max,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 16),
                     Row(
                       children: [

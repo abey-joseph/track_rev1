@@ -5,6 +5,9 @@ part 'habit_entity.freezed.dart';
 /// Frequency with which a habit repeats.
 enum HabitFrequency { daily, weekly, custom }
 
+/// Whether the target is a minimum or maximum threshold.
+enum HabitTargetType { min, max }
+
 @freezed
 abstract class HabitEntity with _$HabitEntity {
   const factory HabitEntity({
@@ -20,6 +23,7 @@ abstract class HabitEntity with _$HabitEntity {
 
     /// 1.0 for a simple boolean check-off; higher for quantitative habits.
     required double targetValue,
+    @Default(HabitTargetType.min) HabitTargetType targetType,
     required bool reminderEnabled,
     required bool isArchived,
     required int sortOrder,

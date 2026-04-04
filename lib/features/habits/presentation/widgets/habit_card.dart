@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:track/core/extensions/context_extensions.dart';
+import 'package:track/features/habits/domain/entities/habit_entity.dart';
 import 'package:track/features/habits/domain/entities/habit_with_details.dart';
+import 'package:track/features/habits/domain/helpers/completion_helpers.dart';
 import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
 import 'package:track/features/habits/presentation/bloc/habits_event.dart';
 import 'package:track/features/habits/presentation/utils/habit_icon_resolver.dart';
 import 'package:track/features/habits/presentation/widgets/day_indicator.dart';
+import 'package:track/features/habits/presentation/widgets/measurable_log_sheet.dart';
 
 class HabitCard extends StatelessWidget {
   const HabitCard({
@@ -70,7 +73,7 @@ class HabitCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           streak.currentStreak > 0
-                              ? '${streak.currentStreak} day streak \u{1F525}'
+                              ? '${streak.currentStreak} ${habit.frequencyType == HabitFrequency.weekly ? 'week' : 'day'} streak \u{1F525}'
                               : 'No active streak',
                           style: textTheme.bodySmall?.copyWith(
                             color:
@@ -86,11 +89,17 @@ class HabitCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            // Day indicators row — outside InkWell so each day is tappable
-            _DaysRow(
-              habitWithDetails: habitWithDetails,
-              habitColor: habitColor,
-            ),
+            // Day/Week indicators row — outside InkWell so each is tappable
+            if (habit.frequencyType == HabitFrequency.weekly)
+              _WeeksRow(
+                habitWithDetails: habitWithDetails,
+                habitColor: habitColor,
+              )
+            else
+              _DaysRow(
+                habitWithDetails: habitWithDetails,
+                habitColor: habitColor,
+              ),
           ],
         ),
       ),
@@ -177,17 +186,35 @@ class _DaysRow extends StatelessWidget {
         final logValue = logMap[iso]; // null = no log
 
         final DayStatus status;
-        if (logValue != null && logValue >= 1.0) {
-          // Has log with value >= 1 → done (green)
+        double? progress;
+        final threshold = habit.targetValue;
+        final targetType = habit.targetType;
+        final isMeasurable = threshold > 1.0;
+
+        if (logValue != null &&
+            isHabitCompleted(logValue, threshold, targetType)) {
+          // Meets target → done (green)
           status = DayStatus.completed;
+        } else if (logValue != null && logValue > 0 && isMeasurable &&
+            targetType == HabitTargetType.min) {
+          // Partial progress on min-type measurable → show circle progress
+          progress = completionProgress(logValue, threshold, targetType);
+          status = DayStatus.neutral;
         } else if (logValue != null && logValue < 1.0) {
-          // Has log with value 0 → explicitly not done (red)
+          // Explicitly logged as 0 → not done (red)
+          status = DayStatus.missed;
+        } else if (logValue != null && isMeasurable &&
+            targetType == HabitTargetType.max) {
+          // Max-type measurable with value > target → failed (red)
           status = DayStatus.missed;
         } else if (!isToday && isScheduled) {
           // Past scheduled day with no log → not done (red)
           status = DayStatus.missed;
+        } else if (isToday && isScheduled) {
+          // Today with no log → neutral (blank)
+          status = DayStatus.neutral;
         } else {
-          // Today with no log, or not a scheduled day → neutral
+          // Not a scheduled day → neutral
           status = DayStatus.neutral;
         }
 
@@ -196,16 +223,208 @@ class _DaysRow extends StatelessWidget {
           dateLabel: '${day.day}',
           status: status,
           habitColor: habitColor,
+          progress: progress,
           onTap: isScheduled
-              ? () {
+              ? () async {
                   HapticFeedback.lightImpact();
-                  context.read<HabitsBloc>().add(
-                        HabitsEvent.toggleLog(habitId: habit.id, date: iso),
-                      );
+                  if (habit.targetValue > 1.0) {
+                    // Measurable habit: show bottom sheet
+                    final result =
+                        await showModalBottomSheet<MeasurableLogResult>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => MeasurableLogSheet(
+                        habitName: habit.name,
+                        targetValue: habit.targetValue,
+                        targetUnit: habit.targetUnit,
+                        targetType: habit.targetType,
+                        currentValue: logValue,
+                      ),
+                    );
+                    if (result == null || !context.mounted) return;
+                    if (result.delete) {
+                      context.read<HabitsBloc>().add(
+                            HabitsEvent.deleteLog(
+                              habitId: habit.id,
+                              date: iso,
+                            ),
+                          );
+                    } else if (result.value != null) {
+                      context.read<HabitsBloc>().add(
+                            HabitsEvent.logValue(
+                              habitId: habit.id,
+                              date: iso,
+                              value: result.value!,
+                            ),
+                          );
+                    }
+                  } else {
+                    // Yes/No habit: existing toggle behavior
+                    context.read<HabitsBloc>().add(
+                          HabitsEvent.toggleLog(
+                            habitId: habit.id,
+                            date: iso,
+                          ),
+                        );
+                  }
                 }
               : null,
         );
       }),
     );
   }
+
+  String _formatIso(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+}
+
+class _WeeksRow extends StatelessWidget {
+  const _WeeksRow({required this.habitWithDetails, required this.habitColor});
+
+  final HabitWithDetails habitWithDetails;
+  final Color habitColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final currentMonday = _mondayOfWeek(today);
+
+    final habit = habitWithDetails.habit;
+    final scheduledDays = habit.frequencyDays.toSet();
+
+    // Build a map of date -> log value for quick lookup
+    final logMap = <String, double>{};
+    for (final log in habitWithDetails.recentLogs) {
+      logMap[log.loggedDate] = log.value;
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: List.generate(7, (i) {
+        // Show weeks from 6 weeks ago through current week (left to right)
+        final weekMonday = currentMonday.subtract(Duration(days: (6 - i) * 7));
+        final isCurrentWeek = weekMonday == currentMonday;
+        final weekNumber = _isoWeekNumber(weekMonday);
+
+        // Count scheduled and completed days in this week
+        var scheduledInWeek = 0;
+        var completedInWeek = 0;
+
+        for (var d = 0; d < 7; d++) {
+          final day = weekMonday.add(Duration(days: d));
+          if (scheduledDays.contains(day.weekday)) {
+            scheduledInWeek++;
+            final iso = _formatIso(day);
+            final value = logMap[iso];
+            if (value != null &&
+                isHabitCompleted(
+                  value,
+                  habit.targetValue,
+                  habit.targetType,
+                )) {
+              completedInWeek++;
+            }
+          }
+        }
+
+        final DayStatus status;
+        double? progress;
+
+        if (scheduledInWeek > 0 && completedInWeek >= scheduledInWeek) {
+          // All scheduled days completed → green
+          status = DayStatus.completed;
+        } else if (completedInWeek > 0 && scheduledInWeek > 0) {
+          // Some progress
+          if (habit.targetType == HabitTargetType.min) {
+            progress = completedInWeek / scheduledInWeek;
+          }
+          status = DayStatus.neutral;
+        } else if (!isCurrentWeek && scheduledInWeek > 0) {
+          // Past week with no completions → missed
+          status = DayStatus.missed;
+        } else {
+          // Current week with no completions, or no scheduled days
+          status = DayStatus.neutral;
+        }
+
+        // Tap on current week logs for today; past weeks are read-only
+        final VoidCallback? onTap;
+        if (isCurrentWeek && scheduledDays.contains(today.weekday)) {
+          final todayIso = _formatIso(today);
+          final todayLogValue = logMap[todayIso];
+          onTap = () async {
+            HapticFeedback.lightImpact();
+            if (habit.targetValue > 1.0) {
+              final result =
+                  await showModalBottomSheet<MeasurableLogResult>(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => MeasurableLogSheet(
+                  habitName: habit.name,
+                  targetValue: habit.targetValue,
+                  targetUnit: habit.targetUnit,
+                  targetType: habit.targetType,
+                  currentValue: todayLogValue,
+                ),
+              );
+              if (result == null || !context.mounted) return;
+              if (result.delete) {
+                context.read<HabitsBloc>().add(
+                      HabitsEvent.deleteLog(
+                        habitId: habit.id,
+                        date: todayIso,
+                      ),
+                    );
+              } else if (result.value != null) {
+                context.read<HabitsBloc>().add(
+                      HabitsEvent.logValue(
+                        habitId: habit.id,
+                        date: todayIso,
+                        value: result.value!,
+                      ),
+                    );
+              }
+            } else {
+              context.read<HabitsBloc>().add(
+                    HabitsEvent.toggleLog(
+                      habitId: habit.id,
+                      date: todayIso,
+                    ),
+                  );
+            }
+          };
+        } else {
+          onTap = null;
+        }
+
+        return DayIndicator(
+          dayLabel: 'W$weekNumber',
+          dateLabel: '${weekMonday.day}/${weekMonday.month}',
+          status: status,
+          habitColor: habitColor,
+          progress: progress,
+          onTap: onTap,
+        );
+      }),
+    );
+  }
+
+  static DateTime _mondayOfWeek(DateTime date) {
+    return date.subtract(Duration(days: date.weekday - 1));
+  }
+
+  static int _isoWeekNumber(DateTime date) {
+    // ISO 8601 week number
+    final thursday = date.add(Duration(days: DateTime.thursday - date.weekday));
+    final jan1 = DateTime(thursday.year, 1, 1);
+    return ((thursday.difference(jan1).inDays) / 7).ceil() + 1;
+  }
+
+  String _formatIso(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 }

@@ -20,6 +20,7 @@ class Habits extends Table {
       text().withDefault(const Constant('[1,2,3,4,5,6,7]'))();
   RealColumn get targetValue => real().withDefault(const Constant(1))();
   TextColumn get targetUnit => text().nullable()();
+  TextColumn get targetType => text().withDefault(const Constant('min'))();
   BoolColumn get reminderEnabled =>
       boolean().withDefault(const Constant(false))();
   TextColumn get reminderTime => text().nullable()();
