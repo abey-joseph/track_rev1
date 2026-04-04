@@ -29,4 +29,6 @@ abstract class HabitsRepository {
     required int habitId,
     required String date,
   });
+
+  Future<Either<Failure, Unit>> deleteHabit({required int habitId});
 }

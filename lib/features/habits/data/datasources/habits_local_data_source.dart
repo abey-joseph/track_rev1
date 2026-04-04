@@ -11,6 +11,7 @@ abstract class HabitsLocalDataSource {
   Future<HabitLog?> getLog(int habitId, String date);
   Future<void> upsertLog(HabitLogsCompanion entry);
   Future<void> deleteLog(int habitId, String date);
+  Future<int> deleteHabit(int habitId);
 }
 
 @LazySingleton(as: HabitsLocalDataSource)
@@ -86,6 +87,15 @@ class HabitsLocalDataSourceImpl implements HabitsLocalDataSource {
   Future<void> deleteLog(int habitId, String date) async {
     try {
       await _db.habitsDao.deleteLog(habitId, date);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<int> deleteHabit(int habitId) async {
+    try {
+      return await _db.habitsDao.deleteHabit(habitId);
     } catch (e) {
       throw CacheException(message: e.toString());
     }

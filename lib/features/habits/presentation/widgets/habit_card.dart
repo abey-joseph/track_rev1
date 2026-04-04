@@ -16,11 +16,13 @@ class HabitCard extends StatelessWidget {
   const HabitCard({
     required this.habitWithDetails,
     required this.onTap,
+    this.onDelete,
     super.key,
   });
 
   final HabitWithDetails habitWithDetails;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -33,12 +35,41 @@ class HabitCard extends StatelessWidget {
     final habitColor = _parseColor(habit.colorHex);
     final icon = resolveHabitIcon(habit.iconName);
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: colorScheme.surfaceContainerLow,
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
+    return GestureDetector(
+      onLongPress: onDelete == null
+          ? null
+          : () async {
+              HapticFeedback.mediumImpact();
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Delete habit?'),
+                  content: Text(
+                    'Are you sure you want to delete "${habit.name}"? This will remove all its logs and cannot be undone.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: Text(
+                        'Delete',
+                        style: TextStyle(color: colorScheme.error),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true) onDelete!();
+            },
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: colorScheme.surfaceContainerLow,
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
@@ -102,6 +133,7 @@ class HabitCard extends StatelessWidget {
               ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -259,13 +291,28 @@ class _DaysRow extends StatelessWidget {
                           );
                     }
                   } else {
-                    // Yes/No habit: existing toggle behavior
-                    context.read<HabitsBloc>().add(
-                          HabitsEvent.toggleLog(
-                            habitId: habit.id,
-                            date: iso,
-                          ),
-                        );
+                    // Yes/No habit
+                    if (isToday) {
+                      // Today: use 3-state toggle (done → failed → neutral)
+                      context.read<HabitsBloc>().add(
+                            HabitsEvent.toggleLog(
+                              habitId: habit.id,
+                              date: iso,
+                            ),
+                          );
+                    } else {
+                      // Past days: use 2-state toggle (done ↔ failed)
+                      // This avoids the invisible "no log = red" state that
+                      // makes it look like nothing changed on the first tap.
+                      final isDone = logValue != null && logValue >= 1.0;
+                      context.read<HabitsBloc>().add(
+                            HabitsEvent.logValue(
+                              habitId: habit.id,
+                              date: iso,
+                              value: isDone ? 0.0 : 1.0,
+                            ),
+                          );
+                    }
                   }
                 }
               : null,

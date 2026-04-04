@@ -263,6 +263,16 @@ class HabitsRepositoryImpl implements HabitsRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, Unit>> deleteHabit({required int habitId}) async {
+    try {
+      await _localDataSource.deleteHabit(habitId);
+      return const Right(unit);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
   String _formatIso(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'

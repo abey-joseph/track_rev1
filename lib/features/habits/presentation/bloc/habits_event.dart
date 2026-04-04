@@ -24,4 +24,7 @@ sealed class HabitsEvent with _$HabitsEvent {
     required int habitId,
     required String date,
   }) = HabitsDeleteLog;
+
+  const factory HabitsEvent.deleteHabit({required int habitId}) =
+      HabitsDeleteHabit;
 }

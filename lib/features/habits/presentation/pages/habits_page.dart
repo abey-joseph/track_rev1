@@ -5,14 +5,11 @@ import 'package:track/core/constants/animation_constants.dart';
 import 'package:track/core/error/failures.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/core/router/app_router.gr.dart';
-import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:track/features/auth/presentation/bloc/auth_state.dart';
 import 'package:track/features/habits/domain/entities/habit_with_details.dart';
 import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
 import 'package:track/features/habits/presentation/bloc/habits_event.dart';
 import 'package:track/features/habits/presentation/bloc/habits_state.dart';
 import 'package:track/features/habits/presentation/widgets/habit_card.dart';
-import 'package:track/injection.dart';
 
 @RoutePage()
 class HabitsPage extends StatelessWidget {
@@ -20,16 +17,8 @@ class HabitsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    final userId = authState is Authenticated ? authState.user.uid : '';
-
-    return BlocProvider(
-      create:
-          (_) =>
-              getIt<HabitsBloc>()
-                ..add(HabitsEvent.loadRequested(userId: userId)),
-      child: const _HabitsView(),
-    );
+    // HabitsBloc is provided by AppShellPage — no local BlocProvider needed.
+    return const _HabitsView();
   }
 }
 
@@ -52,6 +41,14 @@ class _HabitsView extends StatelessWidget {
         ],
       ),
       body: BlocBuilder<HabitsBloc, HabitsState>(
+        buildWhen: (prev, curr) {
+          // Only rebuild when the state type changes or the habits list differs
+          if (prev.runtimeType != curr.runtimeType) return true;
+          if (prev is HabitsLoaded && curr is HabitsLoaded) {
+            return prev.habits != curr.habits;
+          }
+          return true;
+        },
         builder:
             (context, state) => switch (state) {
               HabitsInitial() || HabitsLoading() => const Center(
@@ -139,6 +136,7 @@ class _HabitsView extends StatelessWidget {
       itemBuilder: (context, index) {
         if (index < habits.length) {
           return _AnimatedHabitCard(
+            key: ValueKey(habits[index].habit.id),
             habitWithDetails: habits[index],
             index: index,
             onTap:
@@ -190,6 +188,7 @@ class _AnimatedHabitCard extends StatefulWidget {
     required this.habitWithDetails,
     required this.index,
     required this.onTap,
+    super.key,
   });
 
   final HabitWithDetails habitWithDetails;
@@ -255,6 +254,13 @@ class _AnimatedHabitCardState extends State<_AnimatedHabitCard>
           child: HabitCard(
             habitWithDetails: widget.habitWithDetails,
             onTap: widget.onTap,
+            onDelete: () {
+              context.read<HabitsBloc>().add(
+                    HabitsEvent.deleteHabit(
+                      habitId: widget.habitWithDetails.habit.id,
+                    ),
+                  );
+            },
           ),
         ),
       ),

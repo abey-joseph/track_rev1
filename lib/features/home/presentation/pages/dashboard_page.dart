@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/core/router/app_router.gr.dart';
-import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:track/features/auth/presentation/bloc/auth_state.dart';
 import 'package:track/features/habits/domain/entities/habit_with_details.dart';
 import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
 import 'package:track/features/habits/presentation/bloc/habits_event.dart';
@@ -17,7 +15,6 @@ import 'package:track/features/home/presentation/widgets/streak_score_card.dart'
 import 'package:track/features/habits/presentation/widgets/measurable_log_sheet.dart';
 import 'package:track/features/home/presentation/widgets/today_habits_section.dart';
 import 'package:intl/intl.dart';
-import 'package:track/injection.dart';
 
 @RoutePage()
 class DashboardPage extends StatelessWidget {
@@ -25,16 +22,8 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    final userId = authState is Authenticated ? authState.user.uid : '';
-
-    return BlocProvider(
-      create:
-          (_) =>
-              getIt<HabitsBloc>()
-                ..add(HabitsEvent.loadRequested(userId: userId)),
-      child: const _DashboardView(),
-    );
+    // HabitsBloc is provided by AppShellPage — no local BlocProvider needed.
+    return const _DashboardView();
   }
 }
 
@@ -94,6 +83,13 @@ class _DashboardView extends StatelessWidget {
         children: [
           // Streak & score card
           BlocBuilder<HabitsBloc, HabitsState>(
+            buildWhen: (prev, curr) {
+              if (prev.runtimeType != curr.runtimeType) return true;
+              if (prev is HabitsLoaded && curr is HabitsLoaded) {
+                return prev.habits != curr.habits;
+              }
+              return true;
+            },
             builder: (context, state) {
               if (state is HabitsLoaded) {
                 final todayWeekday = now.weekday;
@@ -137,6 +133,13 @@ class _DashboardView extends StatelessWidget {
 
           // Today's habits
           BlocBuilder<HabitsBloc, HabitsState>(
+            buildWhen: (prev, curr) {
+              if (prev.runtimeType != curr.runtimeType) return true;
+              if (prev is HabitsLoaded && curr is HabitsLoaded) {
+                return prev.habits != curr.habits;
+              }
+              return true;
+            },
             builder: (context, state) {
               final List<HabitItem> habitItems;
               if (state is HabitsLoaded) {
