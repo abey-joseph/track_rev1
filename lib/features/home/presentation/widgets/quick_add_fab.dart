@@ -72,9 +72,10 @@ class _QuickAddFabState extends State<QuickAddFab>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return SizedBox(
-      width: 200,
-      height: 220,
+    return OverflowBox(
+      maxWidth: 300,
+      maxHeight: 350,
+      alignment: Alignment.bottomRight,
       child: Stack(
         alignment: Alignment.bottomRight,
         children: [
@@ -88,30 +89,37 @@ class _QuickAddFabState extends State<QuickAddFab>
             ),
 
           // Speed-dial options
-          if (widget.showSpeedDial) ...[
-            // Log Habit option
-            _SpeedDialOption(
-              controller: _controller,
-              index: 1,
-              icon: Icons.check_circle_outline,
-              label: 'Log Habit',
-              onTap: () {
-                _close();
-                widget.onLogHabit();
-              },
+          if (widget.showSpeedDial)
+            IgnorePointer(
+              ignoring: !_isOpen,
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  // Log Habit option
+                  _SpeedDialOption(
+                    controller: _controller,
+                    index: 1,
+                    icon: Icons.check_circle_outline,
+                    label: 'Log Habit',
+                    onTap: () {
+                      _close();
+                      widget.onLogHabit();
+                    },
+                  ),
+                  // Add Transaction option
+                  _SpeedDialOption(
+                    controller: _controller,
+                    index: 0,
+                    icon: Icons.receipt_long_outlined,
+                    label: 'Add Transaction',
+                    onTap: () {
+                      _close();
+                      widget.onAddTransaction();
+                    },
+                  ),
+                ],
+              ),
             ),
-            // Add Transaction option
-            _SpeedDialOption(
-              controller: _controller,
-              index: 0,
-              icon: Icons.receipt_long_outlined,
-              label: 'Add Transaction',
-              onTap: () {
-                _close();
-                widget.onAddTransaction();
-              },
-            ),
-          ],
 
           // Main FAB
           Positioned(

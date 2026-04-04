@@ -18,6 +18,7 @@ extension HabitRowToEntity on Habit {
         frequencyType: _parseFrequency(frequencyType),
         frequencyDays: _parseDays(frequencyDays),
         targetValue: targetValue,
+        targetType: _parseTargetType(targetType),
         targetUnit: targetUnit,
         reminderEnabled: reminderEnabled,
         reminderTime: reminderTime,
@@ -39,6 +40,7 @@ extension HabitEntityToCompanion on HabitEntity {
         frequencyType: Value(frequencyType.name),
         frequencyDays: Value(jsonEncode(frequencyDays)),
         targetValue: Value(targetValue),
+        targetType: Value(targetType.name),
         targetUnit: Value(targetUnit),
         reminderEnabled: Value(reminderEnabled),
         reminderTime: Value(reminderTime),
@@ -87,6 +89,11 @@ extension HabitStreakRowToEntity on HabitStreak {
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
+
+HabitTargetType _parseTargetType(String raw) => switch (raw) {
+      'max' => HabitTargetType.max,
+      _ => HabitTargetType.min,
+    };
 
 HabitFrequency _parseFrequency(String raw) => switch (raw) {
       'weekly' => HabitFrequency.weekly,

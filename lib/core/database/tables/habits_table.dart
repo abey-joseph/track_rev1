@@ -14,20 +14,17 @@ class Habits extends Table {
   TextColumn get description => text().nullable()();
   TextColumn get iconName =>
       text().withDefault(const Constant('check_circle'))();
-  TextColumn get colorHex =>
-      text().withDefault(const Constant('#4CAF50'))();
-  TextColumn get frequencyType =>
-      text().withDefault(const Constant('daily'))();
+  TextColumn get colorHex => text().withDefault(const Constant('#4CAF50'))();
+  TextColumn get frequencyType => text().withDefault(const Constant('daily'))();
   TextColumn get frequencyDays =>
       text().withDefault(const Constant('[1,2,3,4,5,6,7]'))();
-  RealColumn get targetValue =>
-      real().withDefault(const Constant(1.0))();
+  RealColumn get targetValue => real().withDefault(const Constant(1))();
   TextColumn get targetUnit => text().nullable()();
+  TextColumn get targetType => text().withDefault(const Constant('min'))();
   BoolColumn get reminderEnabled =>
       boolean().withDefault(const Constant(false))();
   TextColumn get reminderTime => text().nullable()();
-  BoolColumn get isArchived =>
-      boolean().withDefault(const Constant(false))();
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();

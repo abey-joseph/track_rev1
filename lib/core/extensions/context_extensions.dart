@@ -15,7 +15,6 @@ extension BuildContextX on BuildContext {
         content: Text(message),
         backgroundColor:
             isError ? colorScheme.error : colorScheme.inverseSurface,
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }

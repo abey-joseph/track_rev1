@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 
-import 'habits_table.dart';
+import 'package:track/core/database/tables/habits_table.dart';
 
 /// One row per habit per day a completion is recorded.
 ///
@@ -11,14 +11,15 @@ import 'habits_table.dart';
 /// UNIQUE constraint on (habitId, loggedDate) — only one log per habit per day.
 class HabitLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get habitId => integer().references(Habits, #id)();
+  IntColumn get habitId =>
+      integer().references(Habits, #id, onDelete: KeyAction.cascade)();
   TextColumn get loggedDate => text()();
-  RealColumn get value => real().withDefault(const Constant(1.0))();
+  RealColumn get value => real().withDefault(const Constant(1))();
   TextColumn get note => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {habitId, loggedDate},
-      ];
+    {habitId, loggedDate},
+  ];
 }

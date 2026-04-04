@@ -4,7 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:track/core/router/app_router.gr.dart';
 import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:track/features/auth/presentation/bloc/auth_state.dart';
+import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
+import 'package:track/features/habits/presentation/bloc/habits_event.dart';
 import 'package:track/features/home/presentation/widgets/quick_add_fab.dart';
+import 'package:track/injection.dart';
 
 @RoutePage()
 class AppShellPage extends StatelessWidget {
@@ -12,15 +15,21 @@ class AppShellPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        state.whenOrNull(
-          unauthenticated: () {
-            context.router.replaceAll([const LoginRoute()]);
-          },
-        );
-      },
-      child: AutoTabsScaffold(
+    final authState = context.read<AuthBloc>().state;
+    final userId = authState is Authenticated ? authState.user.uid : '';
+
+    return BlocProvider(
+      create: (_) => getIt<HabitsBloc>()
+        ..add(HabitsEvent.loadRequested(userId: userId)),
+      child: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          state.whenOrNull(
+            unauthenticated: () {
+              context.router.replaceAll([const LoginRoute()]);
+            },
+          );
+        },
+        child: AutoTabsScaffold(
         routes: const [
           DashboardRoute(),
           HabitsRoute(),
@@ -73,6 +82,7 @@ class AppShellPage extends StatelessWidget {
             },
           );
         },
+        ),
       ),
     );
   }

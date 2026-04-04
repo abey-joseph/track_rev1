@@ -18,12 +18,13 @@ abstract class InsightEntity with _$InsightEntity {
     required bool isRead,
     required bool isDismissed,
 
+    required DateTime generatedAt,
+    required DateTime createdAt,
+
     /// Raw JSON string for extra structured data (charts, related IDs, etc.).
     String? metadata,
-    required DateTime generatedAt,
 
     /// Null = insight never expires.
     DateTime? expiresAt,
-    required DateTime createdAt,
   }) = _InsightEntity;
 }

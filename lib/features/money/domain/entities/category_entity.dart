@@ -9,8 +9,6 @@ abstract class CategoryEntity with _$CategoryEntity {
   const factory CategoryEntity({
     required int id,
 
-    /// Null = system default (visible to all users).
-    String? userId,
     required String name,
     required CategoryTransactionType transactionType,
     required String iconName,
@@ -18,5 +16,8 @@ abstract class CategoryEntity with _$CategoryEntity {
     required bool isDefault,
     required int sortOrder,
     required DateTime createdAt,
+
+    /// Null = system default (visible to all users).
+    String? userId,
   }) = _CategoryEntity;
 }

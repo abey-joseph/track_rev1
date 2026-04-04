@@ -14,8 +14,8 @@ abstract class HabitLogEntity with _$HabitLogEntity {
 
     /// Amount completed; 1.0 = fully done.
     required double value,
-    String? note,
     required DateTime createdAt,
+    String? note,
   }) = _HabitLogEntity;
 }
 
@@ -27,9 +27,10 @@ abstract class HabitStreakEntity with _$HabitStreakEntity {
     required int currentStreak,
     required int longestStreak,
 
-    /// ISO-8601 date string of the most recent completion, or null.
-    String? lastCompletedDate,
     required int totalCompletions,
     required DateTime updatedAt,
+
+    /// ISO-8601 date string of the most recent completion, or null.
+    String? lastCompletedDate,
   }) = _HabitStreakEntity;
 }
