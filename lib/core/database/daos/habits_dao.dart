@@ -39,8 +39,16 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
     (h) => h.id.equals(id),
   )).write(const HabitsCompanion(isArchived: Value(true)));
 
-  Future<int> deleteHabit(int id) =>
-      (delete(habits)..where((h) => h.id.equals(id))).go();
+  Future<int> deleteHabit(int id) async {
+    return transaction(() async {
+      // Delete all logs for this habit
+      await (delete(habitLogs)..where((l) => l.habitId.equals(id))).go();
+      // Delete streak for this habit
+      await (delete(habitStreaks)..where((s) => s.habitId.equals(id))).go();
+      // Finally delete the habit itself
+      return (delete(habits)..where((h) => h.id.equals(id))).go();
+    });
+  }
 
   // ── Habit Logs ───────────────────────────────────────────────────────────
 
@@ -107,7 +115,8 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
         return isMaxType ? value <= threshold : value >= threshold;
       }
 
-      final completedLogs = allLogs.where((l) => _isCompleted(l.value)).toList();
+      final completedLogs =
+          allLogs.where((l) => _isCompleted(l.value)).toList();
 
       if (completedLogs.isEmpty) {
         await into(habitStreaks).insertOnConflictUpdate(
@@ -130,7 +139,9 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
 
       if (isWeekly) {
         // Weekly streak: count consecutive completed weeks
-        final frequencyDays = _parseDays(habit?.frequencyDays ?? '[1,2,3,4,5,6,7]');
+        final frequencyDays = _parseDays(
+          habit?.frequencyDays ?? '[1,2,3,4,5,6,7]',
+        );
         final completedDates = completedLogs.map((l) => l.loggedDate).toSet();
 
         final todayDate = DateTime.parse(_todayIso());
@@ -165,7 +176,8 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
         }
 
         // Longest streak: scan all weeks that have any logs
-        final allDates = allLogs.map((l) => DateTime.parse(l.loggedDate)).toList();
+        final allDates =
+            allLogs.map((l) => DateTime.parse(l.loggedDate)).toList();
         if (allDates.isEmpty) {
           longest = 0;
         } else {
@@ -246,7 +258,10 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
     try {
       final decoded =
           (raw.startsWith('['))
-              ? (raw.substring(1, raw.length - 1)).split(',').map((s) => int.parse(s.trim())).toList()
+              ? (raw.substring(
+                1,
+                raw.length - 1,
+              )).split(',').map((s) => int.parse(s.trim())).toList()
               : [1, 2, 3, 4, 5, 6, 7];
       return decoded;
     } catch (_) {

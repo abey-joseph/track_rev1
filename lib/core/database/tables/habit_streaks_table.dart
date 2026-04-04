@@ -11,7 +11,8 @@ import 'package:track/core/database/tables/habits_table.dart';
 /// [lastCompletedDate]: ISO-8601 date string, nullable.
 class HabitStreaks extends Table {
   /// Primary key doubles as the foreign key to [Habits].
-  IntColumn get habitId => integer().references(Habits, #id)();
+  IntColumn get habitId =>
+      integer().references(Habits, #id, onDelete: KeyAction.cascade)();
   IntColumn get currentStreak => integer().withDefault(const Constant(0))();
   IntColumn get longestStreak => integer().withDefault(const Constant(0))();
   TextColumn get lastCompletedDate => text().nullable()();
