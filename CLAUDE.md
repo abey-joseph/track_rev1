@@ -53,3 +53,28 @@ BlocSelector<MyBloc, MyState, MyItem?>(
 - Wrapping an entire page body in a single `BlocBuilder` that rebuilds on any state change
 - Using `buildWhen: (prev, curr) => prev.habits != curr.habits` on a list — this always returns true when any item changes since the list reference changes
 - Passing full entity objects from a parent `BlocBuilder` down to list item widgets instead of letting each item select its own data
+
+## Clean Architecture & Layer Separation (MANDATORY)
+
+**Strict adherence to the three-layer architecture is non-negotiable. No business logic in the presentation layer, no UI concerns in the data/domain layers.**
+
+1. **Presentation Layer (UI/BLoC):** Only handles UI state, navigation, and user interactions. All BLoCs and pages live here. No database queries, API calls, or business logic — delegate to the domain layer via use cases.
+
+2. **Domain Layer (Business Logic):** Contains entities, repository interfaces, and use cases. This layer defines *what* the app can do, independent of implementation. Use cases orchestrate domain entities and repository calls. **No external dependencies** — domain must not import any packages except `freezed`, `equatable`, or other pure Dart libraries.
+
+3. **Data Layer (Infrastructure):** Handles all external operations: database queries (Drift DAOs), API calls, local storage. Implements repository interfaces from the domain layer. DTOs/Models map external data to domain entities. Data layer imports domain but domain never imports data.
+
+### Key Rules
+
+- **No cross-feature imports:** Features (auth, habits, home, insights, money, settings) are isolated. Reusable utilities go in the `core` package. Never import from another feature's library.
+- **Use repository pattern:** Data operations always go through repositories. Pages/BLoCs never call DAOs or API clients directly.
+- **Pass entities, not DTOs:** Domain and presentation layers work with domain entities. DTOs stay in the data layer and are converted at the boundary.
+- **Unidirectional dependency flow:** Presentation → Domain → Data. Never reverse this. Use dependency injection to invert control.
+
+### Anti-patterns to avoid
+
+- Calling database queries or API functions directly from BLoCs or pages
+- Putting business logic (calculations, validation, transformations) in presentation widgets
+- Importing from another feature's internal structure (e.g., importing `features/auth/data` from `features/habits`)
+- Exposing data-layer types (DTOs, DAOs) in domain or presentation layers
+- Repository implementations in the domain layer
