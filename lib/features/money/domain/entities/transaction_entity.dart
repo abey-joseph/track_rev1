@@ -16,14 +16,14 @@ abstract class TransactionEntity with _$TransactionEntity {
     /// Amount in **cents** (always positive).
     required int amountCents,
     required String title,
-    String? note,
 
     /// ISO-8601 date string, e.g. '2026-03-31'.
     required String transactionDate,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    String? note,
 
     /// ID of the paired transaction row for transfers. Null otherwise.
     int? transferPeerId,
-    required DateTime createdAt,
-    required DateTime updatedAt,
   }) = _TransactionEntity;
 }

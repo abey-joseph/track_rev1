@@ -1,6 +1,9 @@
 import 'package:drift/drift.dart';
+import 'package:track/core/database/app_database.dart' show Transactions;
+import 'package:track/core/database/tables/transactions_table.dart'
+    show Transactions;
 
-import 'categories_table.dart';
+import 'package:track/core/database/tables/categories_table.dart';
 
 /// Per-category (or overall) spending limits.
 ///
@@ -21,8 +24,7 @@ class Budgets extends Table {
       integer().nullable().references(Categories, #id)();
   IntColumn get amountLimit => integer()();
   TextColumn get period => text()();
-  BoolColumn get isActive =>
-      boolean().withDefault(const Constant(true))();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }

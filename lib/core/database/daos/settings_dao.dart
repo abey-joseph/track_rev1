@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
-import '../app_database.dart';
-import '../tables/user_settings_table.dart';
+import 'package:track/core/database/app_database.dart';
+import 'package:track/core/database/tables/user_settings_table.dart';
 
 part 'settings_dao.g.dart';
 
@@ -11,24 +11,21 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
   SettingsDao(super.db);
 
   Future<UserSetting?> getSettings(String userId) =>
-      (select(userSettings)..where((s) => s.userId.equals(userId)))
-          .getSingleOrNull();
+      (select(userSettings)
+        ..where((s) => s.userId.equals(userId))).getSingleOrNull();
 
   Stream<UserSetting?> watchSettings(String userId) =>
-      (select(userSettings)..where((s) => s.userId.equals(userId)))
-          .watchSingleOrNull();
+      (select(userSettings)
+        ..where((s) => s.userId.equals(userId))).watchSingleOrNull();
 
   /// Creates or fully replaces the settings row for [userId].
   Future<void> upsertSettings(UserSettingsCompanion entry) =>
       into(userSettings).insertOnConflictUpdate(entry);
 
   /// Partially updates settings for [userId].
-  Future<int> updateSettings(
-    String userId,
-    UserSettingsCompanion entry,
-  ) =>
-      (update(userSettings)..where((s) => s.userId.equals(userId)))
-          .write(entry);
+  Future<int> updateSettings(String userId, UserSettingsCompanion entry) =>
+      (update(userSettings)
+        ..where((s) => s.userId.equals(userId))).write(entry);
 
   Future<int> deleteSettings(String userId) =>
       (delete(userSettings)..where((s) => s.userId.equals(userId))).go();

@@ -14,18 +14,49 @@ import 'package:track/injection.dart';
 
 // Available colors for habit selection
 const _habitColors = <String>[
-  '#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0',
-  '#00BCD4', '#FF5722', '#607D8B', '#795548', '#F44336',
-  '#3F51B5', '#009688', '#FFC107', '#8BC34A', '#673AB7',
+  '#4CAF50',
+  '#2196F3',
+  '#FF9800',
+  '#E91E63',
+  '#9C27B0',
+  '#00BCD4',
+  '#FF5722',
+  '#607D8B',
+  '#795548',
+  '#F44336',
+  '#3F51B5',
+  '#009688',
+  '#FFC107',
+  '#8BC34A',
+  '#673AB7',
 ];
 
 // Subset of icons for the picker grid
 const _habitIcons = <String>[
-  'check_circle', 'fitness_center', 'book', 'water_drop', 'bedtime',
-  'self_improvement', 'directions_run', 'restaurant', 'code', 'brush',
-  'music_note', 'school', 'timer', 'eco', 'favorite',
-  'spa', 'language', 'psychology', 'savings', 'coffee',
-  'hiking', 'pool', 'pets', 'work',
+  'check_circle',
+  'fitness_center',
+  'book',
+  'water_drop',
+  'bedtime',
+  'self_improvement',
+  'directions_run',
+  'restaurant',
+  'code',
+  'brush',
+  'music_note',
+  'school',
+  'timer',
+  'eco',
+  'favorite',
+  'spa',
+  'language',
+  'psychology',
+  'savings',
+  'coffee',
+  'hiking',
+  'pool',
+  'pets',
+  'work',
 ];
 
 const _weekdayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -56,9 +87,10 @@ class _HabitFormView extends StatelessWidget {
     final colorScheme = context.colorScheme;
 
     return BlocListener<HabitFormBloc, HabitFormState>(
-      listenWhen: (prev, curr) =>
-          prev.isSuccess != curr.isSuccess ||
-          prev.errorMessage != curr.errorMessage,
+      listenWhen:
+          (prev, curr) =>
+              prev.isSuccess != curr.isSuccess ||
+              prev.errorMessage != curr.errorMessage,
       listener: (context, state) {
         if (state.isSuccess) {
           HapticFeedback.mediumImpact();
@@ -76,26 +108,29 @@ class _HabitFormView extends StatelessWidget {
           centerTitle: true,
           actions: [
             BlocBuilder<HabitFormBloc, HabitFormState>(
-              buildWhen: (prev, curr) =>
-                  prev.isSubmitting != curr.isSubmitting ||
-                  prev.name != curr.name,
+              buildWhen:
+                  (prev, curr) =>
+                      prev.isSubmitting != curr.isSubmitting ||
+                      prev.name != curr.name,
               builder: (context, state) {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilledButton(
-                    onPressed: state.isSubmitting || state.name.trim().isEmpty
-                        ? null
-                        : () => _submit(context),
-                    child: state.isSubmitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Save'),
+                    onPressed:
+                        state.isSubmitting || state.name.trim().isEmpty
+                            ? null
+                            : () => _submit(context),
+                    child:
+                        state.isSubmitting
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                            : const Text('Save'),
                   ),
                 );
               },
@@ -145,10 +180,11 @@ class _HabitPreviewHeader extends StatelessWidget {
     final textTheme = context.textTheme;
 
     return BlocBuilder<HabitFormBloc, HabitFormState>(
-      buildWhen: (prev, curr) =>
-          prev.name != curr.name ||
-          prev.iconName != curr.iconName ||
-          prev.colorHex != curr.colorHex,
+      buildWhen:
+          (prev, curr) =>
+              prev.name != curr.name ||
+              prev.iconName != curr.iconName ||
+              prev.colorHex != curr.colorHex,
       builder: (context, state) {
         final color = _parseColor(state.colorHex);
         final icon = resolveHabitIcon(state.iconName);
@@ -167,9 +203,7 @@ class _HabitPreviewHeader extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: color.withValues(alpha: 0.2),
-            ),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
           child: Column(
             children: [
@@ -222,7 +256,8 @@ class _NameField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      onChanged: (value) => context.read<HabitFormBloc>().add(
+      onChanged:
+          (value) => context.read<HabitFormBloc>().add(
             HabitFormEvent.nameChanged(name: value),
           ),
       decoration: InputDecoration(
@@ -262,7 +297,8 @@ class _DescriptionField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      onChanged: (value) => context.read<HabitFormBloc>().add(
+      onChanged:
+          (value) => context.read<HabitFormBloc>().add(
             HabitFormEvent.descriptionChanged(description: value),
           ),
       decoration: InputDecoration(
@@ -304,15 +340,19 @@ class _IconColorSection extends StatelessWidget {
     final colorScheme = context.colorScheme;
 
     return BlocBuilder<HabitFormBloc, HabitFormState>(
-      buildWhen: (prev, curr) =>
-          prev.iconName != curr.iconName || prev.colorHex != curr.colorHex,
+      buildWhen:
+          (prev, curr) =>
+              prev.iconName != curr.iconName || prev.colorHex != curr.colorHex,
       builder: (context, state) {
         final selectedColor = _parseColor(state.colorHex);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionHeader(title: 'Appearance', icon: Icons.palette_outlined),
+            const _SectionHeader(
+              title: 'Appearance',
+              icon: Icons.palette_outlined,
+            ),
             const SizedBox(height: 12),
             // Color picker
             Container(
@@ -334,49 +374,53 @@ class _IconColorSection extends StatelessWidget {
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
-                    children: _habitColors.map((hex) {
-                      final color = _parseColor(hex);
-                      final isSelected = hex == state.colorHex;
-                      return GestureDetector(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          context.read<HabitFormBloc>().add(
+                    children:
+                        _habitColors.map((hex) {
+                          final color = _parseColor(hex);
+                          final isSelected = hex == state.colorHex;
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              context.read<HabitFormBloc>().add(
                                 HabitFormEvent.colorChanged(colorHex: hex),
                               );
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                            border: isSelected
-                                ? Border.all(
-                                    color: colorScheme.onSurface,
-                                    width: 2.5,
-                                  )
-                                : null,
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: color.withValues(alpha: 0.4),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: isSelected
-                              ? const Icon(
-                                  Icons.check_rounded,
-                                  size: 18,
-                                  color: Colors.white,
-                                )
-                              : null,
-                        ),
-                      );
-                    }).toList(),
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border:
+                                    isSelected
+                                        ? Border.all(
+                                          color: colorScheme.onSurface,
+                                          width: 2.5,
+                                        )
+                                        : null,
+                                boxShadow:
+                                    isSelected
+                                        ? [
+                                          BoxShadow(
+                                            color: color.withValues(alpha: 0.4),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                        : null,
+                              ),
+                              child:
+                                  isSelected
+                                      ? const Icon(
+                                        Icons.check_rounded,
+                                        size: 18,
+                                        color: Colors.white,
+                                      )
+                                      : null,
+                            ),
+                          );
+                        }).toList(),
                   ),
                 ],
               ),
@@ -402,36 +446,39 @@ class _IconColorSection extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _habitIcons.map((iconName) {
-                      final icon = resolveHabitIcon(iconName);
-                      final isSelected = iconName == state.iconName;
-                      return GestureDetector(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          context.read<HabitFormBloc>().add(
+                    children:
+                        _habitIcons.map((iconName) {
+                          final icon = resolveHabitIcon(iconName);
+                          final isSelected = iconName == state.iconName;
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              context.read<HabitFormBloc>().add(
                                 HabitFormEvent.iconChanged(iconName: iconName),
                               );
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? selectedColor
-                                : colorScheme.surfaceContainerHigh,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            icon,
-                            size: 22,
-                            color: isSelected
-                                ? Colors.white
-                                : colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color:
+                                    isSelected
+                                        ? selectedColor
+                                        : colorScheme.surfaceContainerHigh,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                icon,
+                                size: 22,
+                                color:
+                                    isSelected
+                                        ? Colors.white
+                                        : colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                   ),
                 ],
               ),
@@ -454,17 +501,18 @@ class _FrequencySection extends StatelessWidget {
     final textTheme = context.textTheme;
 
     return BlocBuilder<HabitFormBloc, HabitFormState>(
-      buildWhen: (prev, curr) =>
-          prev.frequencyType != curr.frequencyType ||
-          prev.frequencyDays != curr.frequencyDays ||
-          prev.colorHex != curr.colorHex,
+      buildWhen:
+          (prev, curr) =>
+              prev.frequencyType != curr.frequencyType ||
+              prev.frequencyDays != curr.frequencyDays ||
+              prev.colorHex != curr.colorHex,
       builder: (context, state) {
         final accentColor = _parseColor(state.colorHex);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionHeader(
+            const _SectionHeader(
               title: 'Frequency',
               icon: Icons.calendar_today_outlined,
             ),
@@ -500,12 +548,12 @@ class _FrequencySection extends StatelessWidget {
                     onSelectionChanged: (selected) {
                       HapticFeedback.selectionClick();
                       context.read<HabitFormBloc>().add(
-                            HabitFormEvent.frequencyChanged(
-                              frequency: selected.first,
-                            ),
-                          );
+                        HabitFormEvent.frequencyChanged(
+                          frequency: selected.first,
+                        ),
+                      );
                     },
-                    style: ButtonStyle(
+                    style: const ButtonStyle(
                       visualDensity: VisualDensity.compact,
                     ),
                   ),
@@ -523,30 +571,31 @@ class _FrequencySection extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: List.generate(7, (i) {
                         final weekday = i + 1; // 1=Mon, 7=Sun
-                        final isSelected =
-                            state.frequencyDays.contains(weekday);
+                        final isSelected = state.frequencyDays.contains(
+                          weekday,
+                        );
                         return GestureDetector(
                           onTap: () {
                             HapticFeedback.selectionClick();
                             context.read<HabitFormBloc>().add(
-                                  HabitFormEvent.dayToggled(weekday: weekday),
-                                );
+                              HabitFormEvent.dayToggled(weekday: weekday),
+                            );
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? accentColor
-                                  : Colors.transparent,
+                              color:
+                                  isSelected ? accentColor : Colors.transparent,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: isSelected
-                                    ? accentColor
-                                    : colorScheme.outline.withValues(
-                                        alpha: 0.3,
-                                      ),
+                                color:
+                                    isSelected
+                                        ? accentColor
+                                        : colorScheme.outline.withValues(
+                                          alpha: 0.3,
+                                        ),
                                 width: 1.5,
                               ),
                             ),
@@ -554,12 +603,14 @@ class _FrequencySection extends StatelessWidget {
                               child: Text(
                                 _weekdayLabels[i],
                                 style: textTheme.labelLarge?.copyWith(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : colorScheme.onSurfaceVariant,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
+                                  color:
+                                      isSelected
+                                          ? Colors.white
+                                          : colorScheme.onSurfaceVariant,
+                                  fontWeight:
+                                      isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
                                 ),
                               ),
                             ),
@@ -589,19 +640,17 @@ class _TargetSection extends StatelessWidget {
     final textTheme = context.textTheme;
 
     return BlocBuilder<HabitFormBloc, HabitFormState>(
-      buildWhen: (prev, curr) =>
-          prev.targetValue != curr.targetValue ||
-          prev.targetUnit != curr.targetUnit,
+      buildWhen:
+          (prev, curr) =>
+              prev.targetValue != curr.targetValue ||
+              prev.targetUnit != curr.targetUnit,
       builder: (context, state) {
         final isQuantitative = state.targetValue > 1.0;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionHeader(
-              title: 'Goal',
-              icon: Icons.flag_outlined,
-            ),
+            const _SectionHeader(title: 'Goal', icon: Icons.flag_outlined),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(16),
@@ -623,10 +672,10 @@ class _TargetSection extends StatelessWidget {
                           onTap: () {
                             HapticFeedback.selectionClick();
                             context.read<HabitFormBloc>().add(
-                                  const HabitFormEvent.targetValueChanged(
-                                    targetValue: 1.0,
-                                  ),
-                                );
+                              const HabitFormEvent.targetValueChanged(
+                                targetValue: 1,
+                              ),
+                            );
                           },
                         ),
                       ),
@@ -641,10 +690,10 @@ class _TargetSection extends StatelessWidget {
                             HapticFeedback.selectionClick();
                             if (!isQuantitative) {
                               context.read<HabitFormBloc>().add(
-                                    const HabitFormEvent.targetValueChanged(
-                                      targetValue: 10.0,
-                                    ),
-                                  );
+                                const HabitFormEvent.targetValueChanged(
+                                  targetValue: 10,
+                                ),
+                              );
                             }
                           },
                         ),
@@ -659,7 +708,8 @@ class _TargetSection extends StatelessWidget {
                           flex: 2,
                           child: TextFormField(
                             initialValue: state.targetValue.toStringAsFixed(
-                              state.targetValue == state.targetValue.roundToDouble()
+                              state.targetValue ==
+                                      state.targetValue.roundToDouble()
                                   ? 0
                                   : 1,
                             ),
@@ -667,10 +717,10 @@ class _TargetSection extends StatelessWidget {
                               final parsed = double.tryParse(value);
                               if (parsed != null && parsed > 0) {
                                 context.read<HabitFormBloc>().add(
-                                      HabitFormEvent.targetValueChanged(
-                                        targetValue: parsed,
-                                      ),
-                                    );
+                                  HabitFormEvent.targetValueChanged(
+                                    targetValue: parsed,
+                                  ),
+                                );
                               }
                             },
                             decoration: InputDecoration(
@@ -700,12 +750,12 @@ class _TargetSection extends StatelessWidget {
                           flex: 3,
                           child: TextFormField(
                             initialValue: state.targetUnit,
-                            onChanged: (value) =>
-                                context.read<HabitFormBloc>().add(
-                                      HabitFormEvent.targetUnitChanged(
-                                        targetUnit: value,
-                                      ),
-                                    ),
+                            onChanged:
+                                (value) => context.read<HabitFormBloc>().add(
+                                  HabitFormEvent.targetUnitChanged(
+                                    targetUnit: value,
+                                  ),
+                                ),
                             decoration: InputDecoration(
                               labelText: 'Unit',
                               hintText: 'e.g. min, glasses, pages',
@@ -761,31 +811,32 @@ class _GoalTypeChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.primaryContainer
-              : colorScheme.surfaceContainerHigh,
+          color:
+              isSelected
+                  ? colorScheme.primaryContainer
+                  : colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(14),
-          border: isSelected
-              ? Border.all(color: colorScheme.primary, width: 1.5)
-              : Border.all(color: Colors.transparent),
+          border:
+              isSelected
+                  ? Border.all(color: colorScheme.primary, width: 1.5)
+                  : Border.all(color: Colors.transparent),
         ),
         child: Column(
           children: [
             Icon(
               icon,
               size: 26,
-              color: isSelected
-                  ? colorScheme.primary
-                  : colorScheme.onSurfaceVariant,
+              color:
+                  isSelected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 6),
             Text(
               label,
               style: textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: isSelected
-                    ? colorScheme.primary
-                    : colorScheme.onSurface,
+                color: isSelected ? colorScheme.primary : colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 2),
@@ -814,14 +865,15 @@ class _ReminderSection extends StatelessWidget {
     final textTheme = context.textTheme;
 
     return BlocBuilder<HabitFormBloc, HabitFormState>(
-      buildWhen: (prev, curr) =>
-          prev.reminderEnabled != curr.reminderEnabled ||
-          prev.reminderTime != curr.reminderTime,
+      buildWhen:
+          (prev, curr) =>
+              prev.reminderEnabled != curr.reminderEnabled ||
+              prev.reminderTime != curr.reminderTime,
       builder: (context, state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionHeader(
+            const _SectionHeader(
               title: 'Reminder',
               icon: Icons.notifications_outlined,
             ),
@@ -835,10 +887,7 @@ class _ReminderSection extends StatelessWidget {
               child: Column(
                 children: [
                   SwitchListTile(
-                    title: Text(
-                      'Daily Reminder',
-                      style: textTheme.bodyLarge,
-                    ),
+                    title: Text('Daily Reminder', style: textTheme.bodyLarge),
                     subtitle: Text(
                       state.reminderEnabled
                           ? 'Reminds you at ${state.reminderTime}'
@@ -851,8 +900,8 @@ class _ReminderSection extends StatelessWidget {
                     onChanged: (_) {
                       HapticFeedback.selectionClick();
                       context.read<HabitFormBloc>().add(
-                            const HabitFormEvent.reminderToggled(),
-                          );
+                        const HabitFormEvent.reminderToggled(),
+                      );
                     },
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -921,8 +970,8 @@ class _ReminderSection extends StatelessWidget {
       final formatted =
           '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
       context.read<HabitFormBloc>().add(
-            HabitFormEvent.reminderTimeChanged(reminderTime: formatted),
-          );
+        HabitFormEvent.reminderTimeChanged(reminderTime: formatted),
+      );
     }
   }
 }

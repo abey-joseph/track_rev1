@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/features/habits/domain/entities/habit_with_details.dart';
+import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
+import 'package:track/features/habits/presentation/bloc/habits_event.dart';
 import 'package:track/features/habits/presentation/utils/habit_icon_resolver.dart';
 import 'package:track/features/habits/presentation/widgets/day_indicator.dart';
 
@@ -31,15 +35,15 @@ class HabitCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: colorScheme.surfaceContainerLow,
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Top row: icon, name/streak, score
-              Row(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Top row: tappable area that navigates to detail
+            InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Row(
                 children: [
                   Container(
                     width: 40,
@@ -66,7 +70,7 @@ class HabitCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           streak.currentStreak > 0
-                              ? '${streak.currentStreak} day streak 🔥'
+                              ? '${streak.currentStreak} day streak \u{1F525}'
                               : 'No active streak',
                           style: textTheme.bodySmall?.copyWith(
                             color:
@@ -80,14 +84,14 @@ class HabitCard extends StatelessWidget {
                   _ScoreBadge(score: score, color: habitColor),
                 ],
               ),
-              const SizedBox(height: 14),
-              // Day indicators row (last 7 days)
-              _DaysRow(
-                habitWithDetails: habitWithDetails,
-                habitColor: habitColor,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 14),
+            // Day indicators row — outside InkWell so each day is tappable
+            _DaysRow(
+              habitWithDetails: habitWithDetails,
+              habitColor: habitColor,
+            ),
+          ],
         ),
       ),
     );
@@ -148,9 +152,16 @@ class _DaysRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final logDates =
-        habitWithDetails.recentLogs.map((l) => l.loggedDate).toSet();
     final dayFormat = DateFormat('E'); // Mon, Tue, etc.
+
+    final habit = habitWithDetails.habit;
+    final scheduledDays = habit.frequencyDays.toSet();
+
+    // Build a map of date -> log value for quick lookup
+    final logMap = <String, double>{};
+    for (final log in habitWithDetails.recentLogs) {
+      logMap[log.loggedDate] = log.value;
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -161,13 +172,38 @@ class _DaysRow extends StatelessWidget {
             '${day.year.toString().padLeft(4, '0')}-'
             '${day.month.toString().padLeft(2, '0')}-'
             '${day.day.toString().padLeft(2, '0')}';
-        final isCompleted = logDates.contains(iso);
+        final isToday = day == today;
+        final isScheduled = scheduledDays.contains(day.weekday);
+        final logValue = logMap[iso]; // null = no log
+
+        final DayStatus status;
+        if (logValue != null && logValue >= 1.0) {
+          // Has log with value >= 1 → done (green)
+          status = DayStatus.completed;
+        } else if (logValue != null && logValue < 1.0) {
+          // Has log with value 0 → explicitly not done (red)
+          status = DayStatus.missed;
+        } else if (!isToday && isScheduled) {
+          // Past scheduled day with no log → not done (red)
+          status = DayStatus.missed;
+        } else {
+          // Today with no log, or not a scheduled day → neutral
+          status = DayStatus.neutral;
+        }
 
         return DayIndicator(
           dayLabel: dayFormat.format(day).substring(0, 3),
           dateLabel: '${day.day}',
-          isCompleted: isCompleted,
+          status: status,
           habitColor: habitColor,
+          onTap: isScheduled
+              ? () {
+                  HapticFeedback.lightImpact();
+                  context.read<HabitsBloc>().add(
+                        HabitsEvent.toggleLog(habitId: habit.id, date: iso),
+                      );
+                }
+              : null,
         );
       }),
     );

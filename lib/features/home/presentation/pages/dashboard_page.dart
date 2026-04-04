@@ -1,17 +1,41 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/core/router/app_router.gr.dart';
+import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:track/features/auth/presentation/bloc/auth_state.dart';
+import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
+import 'package:track/features/habits/presentation/bloc/habits_event.dart';
+import 'package:track/features/habits/presentation/bloc/habits_state.dart';
+import 'package:track/features/habits/presentation/utils/habit_icon_resolver.dart';
 import 'package:track/features/home/presentation/widgets/ai_insight_card.dart';
 import 'package:track/features/home/presentation/widgets/recent_activity_feed.dart';
 import 'package:track/features/home/presentation/widgets/spending_summary_card.dart';
 import 'package:track/features/home/presentation/widgets/streak_score_card.dart';
 import 'package:track/features/home/presentation/widgets/today_habits_section.dart';
+import 'package:intl/intl.dart';
+import 'package:track/injection.dart';
 
 @RoutePage()
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    final userId = authState is Authenticated ? authState.user.uid : '';
+
+    return BlocProvider(
+      create: (_) =>
+          getIt<HabitsBloc>()..add(HabitsEvent.loadRequested(userId: userId)),
+      child: const _DashboardView(),
+    );
+  }
+}
+
+class _DashboardView extends StatelessWidget {
+  const _DashboardView();
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +44,11 @@ class DashboardPage extends StatelessWidget {
     final now = DateTime.now();
     final dateStr = DateFormat('EEEE, MMM d').format(now);
     final greeting = _greeting(now.hour);
+
+    final todayIso =
+        '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
 
     return Scaffold(
       appBar: AppBar(
@@ -60,19 +89,86 @@ class DashboardPage extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
           // Streak & score card
-          const StreakScoreCard(
-            currentStreak: 12,
-            habitsCompleted: 5,
-            habitsTotal: 7,
+          BlocBuilder<HabitsBloc, HabitsState>(
+            builder: (context, state) {
+              if (state is HabitsLoaded) {
+                final todayWeekday = now.weekday;
+                final todayHabits = state.habits
+                    .where(
+                      (h) => h.habit.frequencyDays.contains(todayWeekday),
+                    )
+                    .toList();
+                final completed = todayHabits
+                    .where(
+                      (h) => h.recentLogs.any(
+                        (l) => l.loggedDate == todayIso && l.value >= 1.0,
+                      ),
+                    )
+                    .length;
+                final bestStreak = state.habits.fold<int>(
+                  0,
+                  (max, h) =>
+                      h.streak.currentStreak > max
+                          ? h.streak.currentStreak
+                          : max,
+                );
+                return StreakScoreCard(
+                  currentStreak: bestStreak,
+                  habitsCompleted: completed,
+                  habitsTotal: todayHabits.length,
+                );
+              }
+              return const StreakScoreCard(
+                currentStreak: 0,
+                habitsCompleted: 0,
+                habitsTotal: 0,
+              );
+            },
           ),
           const SizedBox(height: 20),
 
           // Today's habits
-          TodayHabitsSection(
-            habits: _mockHabits,
-            onToggle: (_) {},
-            onSeeAll: () {
-              AutoTabsRouter.of(context).setActiveIndex(1);
+          BlocBuilder<HabitsBloc, HabitsState>(
+            builder: (context, state) {
+              final List<HabitItem> habitItems;
+              if (state is HabitsLoaded) {
+                final todayWeekday = now.weekday;
+                habitItems = state.habits
+                    .where(
+                      (h) => h.habit.frequencyDays.contains(todayWeekday),
+                    )
+                    .map((h) {
+                      final isCompleted = h.recentLogs.any(
+                        (l) => l.loggedDate == todayIso && l.value >= 1.0,
+                      );
+                      return HabitItem(
+                        id: h.habit.id.toString(),
+                        name: h.habit.name,
+                        icon: resolveHabitIcon(h.habit.iconName),
+                        color: _parseColor(h.habit.colorHex),
+                        isCompleted: isCompleted,
+                        subtitle: h.habit.targetUnit,
+                      );
+                    })
+                    .toList();
+              } else {
+                habitItems = [];
+              }
+
+              return TodayHabitsSection(
+                habits: habitItems,
+                onToggle: (id) {
+                  context.read<HabitsBloc>().add(
+                        HabitsEvent.toggleLog(
+                          habitId: int.parse(id),
+                          date: todayIso,
+                        ),
+                      );
+                },
+                onSeeAll: () {
+                  AutoTabsRouter.of(context).setActiveIndex(1);
+                },
+              );
             },
           ),
           const SizedBox(height: 20),
@@ -159,57 +255,12 @@ class DashboardPage extends StatelessWidget {
     if (hour < 17) return 'Good Afternoon';
     return 'Good Evening';
   }
-}
 
-// Mock data for dashboard display
-const _mockHabits = [
-  HabitItem(
-    id: '1',
-    name: 'Meditate',
-    icon: Icons.self_improvement_rounded,
-    color: Color(0xFF31473A),
-    isCompleted: true,
-    subtitle: '10 min',
-  ),
-  HabitItem(
-    id: '2',
-    name: 'Read',
-    icon: Icons.menu_book_rounded,
-    color: Color(0xFF7C8363),
-    isCompleted: true,
-    subtitle: '30 min',
-  ),
-  HabitItem(
-    id: '3',
-    name: 'Exercise',
-    icon: Icons.fitness_center_rounded,
-    color: Color(0xFF4CAF50),
-    isCompleted: true,
-  ),
-  HabitItem(
-    id: '4',
-    name: 'Journal',
-    icon: Icons.edit_note_rounded,
-    color: Color(0xFFFF9800),
-    isCompleted: true,
-  ),
-  HabitItem(
-    id: '5',
-    name: 'Drink Water',
-    icon: Icons.water_drop_rounded,
-    color: Color(0xFF2196F3),
-    isCompleted: true,
-  ),
-  HabitItem(
-    id: '6',
-    name: 'No Social Media',
-    icon: Icons.phone_disabled_rounded,
-    color: Color(0xFFE91E63),
-  ),
-  HabitItem(
-    id: '7',
-    name: 'Sleep by 11 PM',
-    icon: Icons.bedtime_rounded,
-    color: Color(0xFF9C27B0),
-  ),
-];
+  Color _parseColor(String hex) {
+    final buffer = StringBuffer();
+    final cleaned = hex.startsWith('#') ? hex.substring(1) : hex;
+    if (cleaned.length == 6) buffer.write('FF');
+    buffer.write(cleaned);
+    return Color(int.parse(buffer.toString(), radix: 16));
+  }
+}

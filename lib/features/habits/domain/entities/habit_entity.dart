@@ -11,7 +11,6 @@ abstract class HabitEntity with _$HabitEntity {
     required int id,
     required String userId,
     required String name,
-    String? description,
     required String iconName,
     required String colorHex,
     required HabitFrequency frequencyType,
@@ -21,16 +20,17 @@ abstract class HabitEntity with _$HabitEntity {
 
     /// 1.0 for a simple boolean check-off; higher for quantitative habits.
     required double targetValue,
-
-    /// Human-readable unit (e.g. 'min', 'glasses'). Null = simple check.
-    String? targetUnit,
     required bool reminderEnabled,
-
-    /// 'HH:mm' string, e.g. '08:00'. Only meaningful when [reminderEnabled].
-    String? reminderTime,
     required bool isArchived,
     required int sortOrder,
     required DateTime createdAt,
     required DateTime updatedAt,
+    String? description,
+
+    /// Human-readable unit (e.g. 'min', 'glasses'). Null = simple check.
+    String? targetUnit,
+
+    /// 'HH:mm' string, e.g. '08:00'. Only meaningful when [reminderEnabled].
+    String? reminderTime,
   }) = _HabitEntity;
 }

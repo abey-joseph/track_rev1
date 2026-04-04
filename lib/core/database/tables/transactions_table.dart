@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
-import 'accounts_table.dart';
-import 'categories_table.dart';
+import 'package:track/core/database/tables/accounts_table.dart';
+import 'package:track/core/database/tables/categories_table.dart';
 
 /// Income, expense, and transfer records.
 ///
@@ -25,10 +25,8 @@ class Transactions extends Table {
   TextColumn get transactionDate => text()();
 
   /// Links the two rows that form a transfer pair.
-  IntColumn get transferPeerId => integer().nullable().references(
-        Transactions,
-        #id,
-      )();
+  IntColumn get transferPeerId =>
+      integer().nullable().references(Transactions, #id)();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }

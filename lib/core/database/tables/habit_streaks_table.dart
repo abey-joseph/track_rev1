@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
+import 'package:track/core/database/app_database.dart' show HabitLog;
 
-import 'habits_table.dart';
+import 'package:track/core/database/tables/habits_table.dart';
 
 /// Denormalized streak cache — 1:1 with [Habits].
 ///
@@ -11,13 +12,10 @@ import 'habits_table.dart';
 class HabitStreaks extends Table {
   /// Primary key doubles as the foreign key to [Habits].
   IntColumn get habitId => integer().references(Habits, #id)();
-  IntColumn get currentStreak =>
-      integer().withDefault(const Constant(0))();
-  IntColumn get longestStreak =>
-      integer().withDefault(const Constant(0))();
+  IntColumn get currentStreak => integer().withDefault(const Constant(0))();
+  IntColumn get longestStreak => integer().withDefault(const Constant(0))();
   TextColumn get lastCompletedDate => text().nullable()();
-  IntColumn get totalCompletions =>
-      integer().withDefault(const Constant(0))();
+  IntColumn get totalCompletions => integer().withDefault(const Constant(0))();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override

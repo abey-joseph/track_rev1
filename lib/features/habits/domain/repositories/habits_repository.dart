@@ -13,4 +13,9 @@ abstract class HabitsRepository {
   );
 
   Future<Either<Failure, int>> createHabit(HabitEntity habit);
+
+  Future<Either<Failure, Unit>> toggleHabitLog({
+    required int habitId,
+    required String date,
+  });
 }

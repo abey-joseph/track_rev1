@@ -1,5 +1,7 @@
+import 'package:drift/drift.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
+import 'package:track/core/database/app_database.dart';
 import 'package:track/core/error/exceptions.dart';
 import 'package:track/core/error/failures.dart';
 import 'package:track/features/habits/data/datasources/habits_local_data_source.dart';
@@ -53,18 +55,20 @@ class HabitsRepositoryImpl implements HabitsRepository {
     final streakRaw = await _localDataSource.getStreak(habit.id);
 
     final now = DateTime.now();
-    final sevenDaysAgo = DateTime(now.year, now.month, now.day)
-        .subtract(const Duration(days: 6));
+    final sevenDaysAgo = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(const Duration(days: 6));
 
-    final recentLogs = logsRaw
-        .map((l) => l.toEntity())
-        .where((l) {
+    final recentLogs =
+        logsRaw.map((l) => l.toEntity()).where((l) {
           final date = DateTime.parse(l.loggedDate);
           return !date.isBefore(sevenDaysAgo);
-        })
-        .toList();
+        }).toList();
 
-    final streak = streakRaw?.toEntity() ??
+    final streak =
+        streakRaw?.toEntity() ??
         HabitStreakEntity(
           habitId: habit.id,
           currentStreak: 0,
@@ -84,20 +88,29 @@ class HabitsRepositoryImpl implements HabitsRepository {
   }
 
   /// Frequency-aware score: only counts days the habit is scheduled.
+  /// Only logs with value >= 1.0 count as completed.
   int _calculateScore(HabitEntity habit, List<HabitLogEntity> recentLogs) {
     final today = DateTime.now();
-    final logDates = recentLogs.map((l) => l.loggedDate).toSet();
+    // Map date → value so we can check completion threshold
+    final logMap = <String, double>{};
+    for (final l in recentLogs) {
+      logMap[l.loggedDate] = l.value;
+    }
 
-    int scheduledDays = 0;
-    int completedDays = 0;
+    var scheduledDays = 0;
+    var completedDays = 0;
 
-    for (int i = 0; i < 7; i++) {
-      final day = DateTime(today.year, today.month, today.day)
-          .subtract(Duration(days: i));
+    for (var i = 0; i < 7; i++) {
+      final day = DateTime(
+        today.year,
+        today.month,
+        today.day,
+      ).subtract(Duration(days: i));
       if (habit.frequencyDays.contains(day.weekday)) {
         scheduledDays++;
         final iso = _formatIso(day);
-        if (logDates.contains(iso)) {
+        final value = logMap[iso];
+        if (value != null && value >= 1.0) {
           completedDays++;
         }
       }
@@ -112,6 +125,48 @@ class HabitsRepositoryImpl implements HabitsRepository {
     try {
       final id = await _localDataSource.insertHabit(habit.toCompanion());
       return Right(id);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  /// Three-state toggle cycle:
+  ///   no log  → create log (value=1.0, done/green)
+  ///   value≥1 → update log (value=0.0, not-done/red)
+  ///   value<1 → delete log  (neutral for today, auto-red for past)
+  @override
+  Future<Either<Failure, Unit>> toggleHabitLog({
+    required int habitId,
+    required String date,
+  }) async {
+    try {
+      final existing = await _localDataSource.getLog(habitId, date);
+      if (existing == null) {
+        // No log → mark done (green)
+        await _localDataSource.upsertLog(
+          HabitLogsCompanion(
+            habitId: Value(habitId),
+            loggedDate: Value(date),
+            value: const Value(1),
+            createdAt: Value(DateTime.now()),
+          ),
+        );
+      } else if (existing.value >= 1.0) {
+        // Done → mark not-done (red)
+        await _localDataSource.upsertLog(
+          HabitLogsCompanion(
+            id: Value(existing.id),
+            habitId: Value(habitId),
+            loggedDate: Value(date),
+            value: const Value(0),
+            createdAt: Value(existing.createdAt),
+          ),
+        );
+      } else {
+        // Not-done → remove entry (neutral)
+        await _localDataSource.deleteLog(habitId, date);
+      }
+      return const Right(unit);
     } on CacheException catch (e) {
       return Left(Failure.cache(message: e.message));
     }

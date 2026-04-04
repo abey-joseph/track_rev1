@@ -8,4 +8,9 @@ sealed class HabitsEvent with _$HabitsEvent {
       HabitsLoadRequested;
 
   const factory HabitsEvent.refreshRequested() = HabitsRefreshRequested;
+
+  const factory HabitsEvent.toggleLog({
+    required int habitId,
+    required String date,
+  }) = HabitsToggleLog;
 }

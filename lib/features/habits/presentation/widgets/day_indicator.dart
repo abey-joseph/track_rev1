@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:track/core/extensions/context_extensions.dart';
+import 'package:track/core/theme/app_colors.dart';
+
+/// Tri-state status for a single day's habit completion.
+enum DayStatus { completed, missed, neutral }
 
 /// Radio-button style indicator for a single day's habit completion status.
 class DayIndicator extends StatelessWidget {
   const DayIndicator({
     required this.dayLabel,
     required this.dateLabel,
-    required this.isCompleted,
+    required this.status,
     required this.habitColor,
+    this.onTap,
     super.key,
   });
 
@@ -17,16 +22,38 @@ class DayIndicator extends StatelessWidget {
   /// Date number, e.g. "28".
   final String dateLabel;
 
-  /// Whether the habit was completed on this day.
-  final bool isCompleted;
+  /// The completion status for this day.
+  final DayStatus status;
 
-  /// The habit's accent color.
+  /// The habit's accent color (used for neutral outline).
   final Color habitColor;
+
+  /// Tap callback. When null the indicator is not interactive.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
     final textTheme = context.textTheme;
+
+    final Color bgColor;
+    final Color borderColor;
+    final Widget? icon;
+
+    switch (status) {
+      case DayStatus.completed:
+        bgColor = AppColors.success;
+        borderColor = AppColors.success;
+        icon = const Icon(Icons.check_rounded, size: 14, color: Colors.white);
+      case DayStatus.missed:
+        bgColor = AppColors.error;
+        borderColor = AppColors.error;
+        icon = const Icon(Icons.close_rounded, size: 14, color: Colors.white);
+      case DayStatus.neutral:
+        bgColor = Colors.transparent;
+        borderColor = habitColor.withValues(alpha: 0.3);
+        icon = null;
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -39,23 +66,19 @@ class DayIndicator extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: isCompleted ? habitColor : Colors.transparent,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isCompleted
-                  ? habitColor
-                  : habitColor.withValues(alpha: 0.3),
-              width: 2,
+        GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: bgColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: borderColor, width: 2),
             ),
+            child: icon,
           ),
-          child: isCompleted
-              ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-              : null,
         ),
         const SizedBox(height: 2),
         Text(

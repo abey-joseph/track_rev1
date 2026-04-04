@@ -1,9 +1,9 @@
 import 'package:drift/drift.dart';
 
-import '../app_database.dart';
-import '../tables/habit_logs_table.dart';
-import '../tables/habit_streaks_table.dart';
-import '../tables/habits_table.dart';
+import 'package:track/core/database/app_database.dart';
+import 'package:track/core/database/tables/habit_logs_table.dart';
+import 'package:track/core/database/tables/habit_streaks_table.dart';
+import 'package:track/core/database/tables/habits_table.dart';
 
 part 'habits_dao.g.dart';
 
@@ -14,29 +14,30 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
   // ── Habits ──────────────────────────────────────────────────────────────
 
   /// All non-archived habits for [userId], ordered by [sortOrder].
-  Future<List<Habit>> getHabits(String userId) => (select(habits)
-        ..where((h) => h.userId.equals(userId) & h.isArchived.equals(false))
-        ..orderBy([(h) => OrderingTerm.asc(h.sortOrder)]))
-      .get();
+  Future<List<Habit>> getHabits(String userId) =>
+      (select(habits)
+            ..where((h) => h.userId.equals(userId) & h.isArchived.equals(false))
+            ..orderBy([(h) => OrderingTerm.asc(h.sortOrder)]))
+          .get();
 
   /// Watch all non-archived habits for reactive UI updates.
-  Stream<List<Habit>> watchHabits(String userId) => (select(habits)
-        ..where((h) => h.userId.equals(userId) & h.isArchived.equals(false))
-        ..orderBy([(h) => OrderingTerm.asc(h.sortOrder)]))
-      .watch();
+  Stream<List<Habit>> watchHabits(String userId) =>
+      (select(habits)
+            ..where((h) => h.userId.equals(userId) & h.isArchived.equals(false))
+            ..orderBy([(h) => OrderingTerm.asc(h.sortOrder)]))
+          .watch();
 
   Future<Habit?> getHabitById(int id) =>
       (select(habits)..where((h) => h.id.equals(id))).getSingleOrNull();
 
-  Future<int> insertHabit(HabitsCompanion entry) =>
-      into(habits).insert(entry);
+  Future<int> insertHabit(HabitsCompanion entry) => into(habits).insert(entry);
 
   Future<bool> updateHabit(HabitsCompanion entry) =>
       update(habits).replace(entry);
 
-  Future<int> archiveHabit(int id) => (update(habits)
-        ..where((h) => h.id.equals(id)))
-      .write(const HabitsCompanion(isArchived: Value(true)));
+  Future<int> archiveHabit(int id) => (update(habits)..where(
+    (h) => h.id.equals(id),
+  )).write(const HabitsCompanion(isArchived: Value(true)));
 
   Future<int> deleteHabit(int id) =>
       (delete(habits)..where((h) => h.id.equals(id))).go();
@@ -45,12 +46,9 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
 
   /// Returns the log for a specific habit on [date] (ISO-8601), if any.
   Future<HabitLog?> getLog(int habitId, String date) =>
-      (select(habitLogs)
-            ..where(
-              (l) =>
-                  l.habitId.equals(habitId) & l.loggedDate.equals(date),
-            ))
-          .getSingleOrNull();
+      (select(habitLogs)..where(
+        (l) => l.habitId.equals(habitId) & l.loggedDate.equals(date),
+      )).getSingleOrNull();
 
   /// All logs for [habitId] in descending date order.
   Future<List<HabitLog>> getLogsForHabit(int habitId) =>
@@ -72,12 +70,9 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
 
   /// Delete the log for [habitId] on [date] and recalculate streak.
   Future<void> deleteLog(int habitId, String date) async {
-    await (delete(habitLogs)
-          ..where(
-            (l) =>
-                l.habitId.equals(habitId) & l.loggedDate.equals(date),
-          ))
-        .go();
+    await (delete(habitLogs)..where(
+      (l) => l.habitId.equals(habitId) & l.loggedDate.equals(date),
+    )).go();
     await _recalculateStreak(habitId);
   }
 
@@ -85,12 +80,11 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
 
   Future<HabitStreak?> getStreak(int habitId) =>
       (select(habitStreaks)
-            ..where((s) => s.habitId.equals(habitId)))
-          .getSingleOrNull();
+        ..where((s) => s.habitId.equals(habitId))).getSingleOrNull();
 
   Stream<HabitStreak?> watchStreak(int habitId) =>
-      (select(habitStreaks)..where((s) => s.habitId.equals(habitId)))
-          .watchSingleOrNull();
+      (select(habitStreaks)
+        ..where((s) => s.habitId.equals(habitId))).watchSingleOrNull();
 
   /// Recalculates [currentStreak], [longestStreak], and [totalCompletions]
   /// for [habitId] by scanning its log history.
@@ -99,10 +93,13 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
   /// consistent.
   Future<void> _recalculateStreak(int habitId) async {
     await transaction(() async {
-      final logs = await (select(habitLogs)
-            ..where((l) => l.habitId.equals(habitId))
-            ..orderBy([(l) => OrderingTerm.desc(l.loggedDate)]))
-          .get();
+      // Only count logs with value >= 1.0 as completions for streaks.
+      final allLogs =
+          await (select(habitLogs)
+                ..where((l) => l.habitId.equals(habitId))
+                ..orderBy([(l) => OrderingTerm.desc(l.loggedDate)]))
+              .get();
+      final logs = allLogs.where((l) => l.value >= 1.0).toList();
 
       if (logs.isEmpty) {
         await into(habitStreaks).insertOnConflictUpdate(
@@ -122,9 +119,9 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
       final today = _todayIso();
       final yesterday = _offsetDayIso(-1);
 
-      int current = 0;
+      var current = 0;
       // Streak starts from today or yesterday (allow for today not yet logged).
-      String? cursor =
+      var cursor =
           sortedDates.first == today || sortedDates.first == yesterday
               ? sortedDates.first
               : null;
@@ -141,8 +138,8 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
       }
 
       // Longest streak — scan all logs.
-      int longest = 0;
-      int run = 0;
+      var longest = 0;
+      var run = 0;
       String? prev;
       for (final date in sortedDates.reversed) {
         if (prev == null || date == _nextDayIso(prev)) {

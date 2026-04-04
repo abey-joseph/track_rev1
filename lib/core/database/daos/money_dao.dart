@@ -1,10 +1,10 @@
 import 'package:drift/drift.dart';
 
-import '../app_database.dart';
-import '../tables/accounts_table.dart';
-import '../tables/budgets_table.dart';
-import '../tables/categories_table.dart';
-import '../tables/transactions_table.dart';
+import 'package:track/core/database/app_database.dart';
+import 'package:track/core/database/tables/accounts_table.dart';
+import 'package:track/core/database/tables/budgets_table.dart';
+import 'package:track/core/database/tables/categories_table.dart';
+import 'package:track/core/database/tables/transactions_table.dart';
 
 part 'money_dao.g.dart';
 
@@ -16,17 +16,13 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
 
   Future<List<Account>> getAccounts(String userId) =>
       (select(accounts)
-            ..where(
-              (a) => a.userId.equals(userId) & a.isArchived.equals(false),
-            )
+            ..where((a) => a.userId.equals(userId) & a.isArchived.equals(false))
             ..orderBy([(a) => OrderingTerm.asc(a.sortOrder)]))
           .get();
 
   Stream<List<Account>> watchAccounts(String userId) =>
       (select(accounts)
-            ..where(
-              (a) => a.userId.equals(userId) & a.isArchived.equals(false),
-            )
+            ..where((a) => a.userId.equals(userId) & a.isArchived.equals(false))
             ..orderBy([(a) => OrderingTerm.asc(a.sortOrder)]))
           .watch();
 
@@ -39,18 +35,16 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
   Future<bool> updateAccount(AccountsCompanion entry) =>
       update(accounts).replace(entry);
 
-  Future<int> archiveAccount(int id) =>
-      (update(accounts)..where((a) => a.id.equals(id)))
-          .write(const AccountsCompanion(isArchived: Value(true)));
+  Future<int> archiveAccount(int id) => (update(accounts)..where(
+    (a) => a.id.equals(id),
+  )).write(const AccountsCompanion(isArchived: Value(true)));
 
   // ── Categories ───────────────────────────────────────────────────────────
 
   /// Returns system defaults (userId IS NULL) plus the user's own categories.
   Future<List<Category>> getCategories(String userId) =>
       (select(categories)
-            ..where(
-              (c) => c.userId.isNull() | c.userId.equals(userId),
-            )
+            ..where((c) => c.userId.isNull() | c.userId.equals(userId))
             ..orderBy([
               (c) => OrderingTerm.desc(c.isDefault),
               (c) => OrderingTerm.asc(c.sortOrder),
@@ -59,9 +53,7 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
 
   Stream<List<Category>> watchCategories(String userId) =>
       (select(categories)
-            ..where(
-              (c) => c.userId.isNull() | c.userId.equals(userId),
-            )
+            ..where((c) => c.userId.isNull() | c.userId.equals(userId))
             ..orderBy([
               (c) => OrderingTerm.desc(c.isDefault),
               (c) => OrderingTerm.asc(c.sortOrder),
@@ -86,8 +78,7 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
     int? accountId,
     int? categoryId,
   }) {
-    final query = select(transactions)
-      ..where((t) => t.userId.equals(userId));
+    final query = select(transactions)..where((t) => t.userId.equals(userId));
     if (fromDate != null) {
       query.where((t) => t.transactionDate.isBiggerOrEqualValue(fromDate));
     }
@@ -109,8 +100,7 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
     String? fromDate,
     String? toDate,
   }) {
-    final query = select(transactions)
-      ..where((t) => t.userId.equals(userId));
+    final query = select(transactions)..where((t) => t.userId.equals(userId));
     if (fromDate != null) {
       query.where((t) => t.transactionDate.isBiggerOrEqualValue(fromDate));
     }
@@ -122,8 +112,7 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
   }
 
   Future<Transaction?> getTransactionById(int id) =>
-      (select(transactions)..where((t) => t.id.equals(id)))
-          .getSingleOrNull();
+      (select(transactions)..where((t) => t.id.equals(id))).getSingleOrNull();
 
   /// Inserts a transaction and adjusts [accountId]'s balance atomically.
   ///
@@ -174,8 +163,7 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
 
   /// Adjusts [Accounts.balance] for [accountId] by [delta] cents.
   Future<void> _adjustBalance(int accountId, int delta) async {
-    await (update(accounts)..where((a) => a.id.equals(accountId)))
-        .write(
+    await (update(accounts)..where((a) => a.id.equals(accountId))).write(
       AccountsCompanion.custom(
         balance: accounts.balance + Variable(delta),
         updatedAt: Variable(DateTime.now()),
@@ -186,18 +174,14 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
   // ── Budgets ───────────────────────────────────────────────────────────────
 
   Future<List<Budget>> getBudgets(String userId) =>
-      (select(budgets)
-            ..where(
-              (b) => b.userId.equals(userId) & b.isActive.equals(true),
-            ))
-          .get();
+      (select(
+        budgets,
+      )..where((b) => b.userId.equals(userId) & b.isActive.equals(true))).get();
 
   Stream<List<Budget>> watchBudgets(String userId) =>
-      (select(budgets)
-            ..where(
-              (b) => b.userId.equals(userId) & b.isActive.equals(true),
-            ))
-          .watch();
+      (select(budgets)..where(
+        (b) => b.userId.equals(userId) & b.isActive.equals(true),
+      )).watch();
 
   Future<Budget?> getBudgetById(int id) =>
       (select(budgets)..where((b) => b.id.equals(id))).getSingleOrNull();
@@ -208,9 +192,9 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
   Future<bool> updateBudget(BudgetsCompanion entry) =>
       update(budgets).replace(entry);
 
-  Future<int> deactivateBudget(int id) =>
-      (update(budgets)..where((b) => b.id.equals(id)))
-          .write(const BudgetsCompanion(isActive: Value(false)));
+  Future<int> deactivateBudget(int id) => (update(budgets)..where(
+    (b) => b.id.equals(id),
+  )).write(const BudgetsCompanion(isActive: Value(false)));
 
   /// Calculates the total **cents** spent in [period] for a [categoryId]
   /// (or all categories if null).
@@ -222,14 +206,13 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
     String toDate, {
     int? categoryId,
   }) async {
-    final query = select(transactions)
-      ..where(
-        (t) =>
-            t.userId.equals(userId) &
-            t.type.equals('expense') &
-            t.transactionDate.isBiggerOrEqualValue(fromDate) &
-            t.transactionDate.isSmallerOrEqualValue(toDate),
-      );
+    final query = select(transactions)..where(
+      (t) =>
+          t.userId.equals(userId) &
+          t.type.equals('expense') &
+          t.transactionDate.isBiggerOrEqualValue(fromDate) &
+          t.transactionDate.isSmallerOrEqualValue(toDate),
+    );
     if (categoryId != null) {
       query.where((t) => t.categoryId.equals(categoryId));
     }

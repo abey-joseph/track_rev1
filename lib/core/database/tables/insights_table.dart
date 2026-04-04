@@ -16,12 +16,9 @@ class Insights extends Table {
   TextColumn get title => text().withLength(min: 1, max: 200)();
   TextColumn get body => text()();
   TextColumn get type => text()();
-  RealColumn get confidenceScore =>
-      real().withDefault(const Constant(0.0))();
-  BoolColumn get isRead =>
-      boolean().withDefault(const Constant(false))();
-  BoolColumn get isDismissed =>
-      boolean().withDefault(const Constant(false))();
+  RealColumn get confidenceScore => real().withDefault(const Constant(0))();
+  BoolColumn get isRead => boolean().withDefault(const Constant(false))();
+  BoolColumn get isDismissed => boolean().withDefault(const Constant(false))();
 
   /// JSON blob — nullable; may be absent for simple text-only insights.
   TextColumn get metadata => text().nullable()();

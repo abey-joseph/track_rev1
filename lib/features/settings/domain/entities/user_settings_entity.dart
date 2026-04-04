@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'user_settings_entity.freezed.dart';
@@ -10,8 +11,6 @@ enum AppThemeMode { light, dark, system }
 abstract class UserSettingsEntity with _$UserSettingsEntity {
   const factory UserSettingsEntity({
     required String userId,
-    String? displayName,
-    String? avatarUrl,
 
     /// ISO 4217 currency code, e.g. 'USD'.
     required String currency,
@@ -26,5 +25,7 @@ abstract class UserSettingsEntity with _$UserSettingsEntity {
     required int firstDayOfWeek,
     required bool onboardingCompleted,
     required DateTime updatedAt,
+    String? displayName,
+    String? avatarUrl,
   }) = _UserSettingsEntity;
 }
