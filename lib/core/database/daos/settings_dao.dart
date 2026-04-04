@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 
 import 'package:track/core/database/app_database.dart';
-import 'package:track/core/database/tables/user_settings_table.dart';
 
 part 'settings_dao.g.dart';
 

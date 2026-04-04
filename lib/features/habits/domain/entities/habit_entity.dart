@@ -23,12 +23,12 @@ abstract class HabitEntity with _$HabitEntity {
 
     /// 1.0 for a simple boolean check-off; higher for quantitative habits.
     required double targetValue,
-    @Default(HabitTargetType.min) HabitTargetType targetType,
     required bool reminderEnabled,
     required bool isArchived,
     required int sortOrder,
     required DateTime createdAt,
     required DateTime updatedAt,
+    @Default(HabitTargetType.min) HabitTargetType targetType,
     String? description,
 
     /// Human-readable unit (e.g. 'min', 'glasses'). Null = simple check.

@@ -46,10 +46,11 @@ class HabitsBloc extends Bloc<HabitsEvent, HabitsState> {
 
     await emit.forEach(
       _watchHabitsWithDetails(GetHabitsParams(userId: event.userId)),
-      onData: (result) => result.fold(
-        (failure) => HabitsState.error(failure: failure),
-        (habits) => HabitsState.loaded(habits: habits),
-      ),
+      onData:
+          (result) => result.fold(
+            (failure) => HabitsState.error(failure: failure),
+            (habits) => HabitsState.loaded(habits: habits),
+          ),
     );
   }
 
@@ -69,10 +70,11 @@ class HabitsBloc extends Bloc<HabitsEvent, HabitsState> {
     // Optimistic update: modify the affected habit's log in-place
     final currentState = state;
     if (currentState is HabitsLoaded) {
-      final updatedHabits = currentState.habits.map((h) {
-        if (h.habit.id != event.habitId) return h;
-        return _applyToggle(h, event.date);
-      }).toList();
+      final updatedHabits =
+          currentState.habits.map((h) {
+            if (h.habit.id != event.habitId) return h;
+            return _applyToggle(h, event.date);
+          }).toList();
       emit(HabitsState.loaded(habits: updatedHabits));
     }
 
@@ -95,10 +97,11 @@ class HabitsBloc extends Bloc<HabitsEvent, HabitsState> {
     // Optimistic update: set the value for the affected habit's log
     final currentState = state;
     if (currentState is HabitsLoaded) {
-      final updatedHabits = currentState.habits.map((h) {
-        if (h.habit.id != event.habitId) return h;
-        return _applyLogValue(h, event.date, event.value);
-      }).toList();
+      final updatedHabits =
+          currentState.habits.map((h) {
+            if (h.habit.id != event.habitId) return h;
+            return _applyLogValue(h, event.date, event.value);
+          }).toList();
       emit(HabitsState.loaded(habits: updatedHabits));
     }
 
@@ -125,10 +128,11 @@ class HabitsBloc extends Bloc<HabitsEvent, HabitsState> {
     // Optimistic update: remove the log for the affected habit
     final currentState = state;
     if (currentState is HabitsLoaded) {
-      final updatedHabits = currentState.habits.map((h) {
-        if (h.habit.id != event.habitId) return h;
-        return _applyDeleteLog(h, event.date);
-      }).toList();
+      final updatedHabits =
+          currentState.habits.map((h) {
+            if (h.habit.id != event.habitId) return h;
+            return _applyDeleteLog(h, event.date);
+          }).toList();
       emit(HabitsState.loaded(habits: updatedHabits));
     }
 
@@ -152,7 +156,9 @@ class HabitsBloc extends Bloc<HabitsEvent, HabitsState> {
     final currentState = state;
     if (currentState is HabitsLoaded) {
       final updatedHabits =
-          currentState.habits.where((h) => h.habit.id != event.habitId).toList();
+          currentState.habits
+              .where((h) => h.habit.id != event.habitId)
+              .toList();
       emit(HabitsState.loaded(habits: updatedHabits));
     }
 
@@ -183,7 +189,7 @@ class HabitsBloc extends Bloc<HabitsEvent, HabitsState> {
         id: -1, // placeholder; will be corrected after re-fetch
         habitId: h.habit.id,
         loggedDate: date,
-        value: 1.0,
+        value: 1,
         createdAt: DateTime.now(),
       );
       return h.copyWith(recentLogs: [...h.recentLogs, newLog]);
@@ -192,7 +198,7 @@ class HabitsBloc extends Bloc<HabitsEvent, HabitsState> {
     final existing = h.recentLogs[existingIdx];
     if (existing.value >= 1.0) {
       // Done → mark failed
-      final updated = existing.copyWith(value: 0.0);
+      final updated = existing.copyWith(value: 0);
       final logs = List<HabitLogEntity>.from(h.recentLogs);
       logs[existingIdx] = updated;
       return h.copyWith(recentLogs: logs);

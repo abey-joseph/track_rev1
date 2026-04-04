@@ -1,10 +1,6 @@
 import 'package:drift/drift.dart';
 
 import 'package:track/core/database/app_database.dart';
-import 'package:track/core/database/tables/accounts_table.dart';
-import 'package:track/core/database/tables/budgets_table.dart';
-import 'package:track/core/database/tables/categories_table.dart';
-import 'package:track/core/database/tables/transactions_table.dart';
 
 part 'money_dao.g.dart';
 

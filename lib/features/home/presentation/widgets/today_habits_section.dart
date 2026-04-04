@@ -55,8 +55,8 @@ class TodayHabitsSection extends StatelessWidget {
             habit: habits[index],
             onToggle: () => onToggle(habits[index].id),
             delay: Duration(
-              milliseconds: AnimationConstants.staggerDelay.inMilliseconds *
-                  index,
+              milliseconds:
+                  AnimationConstants.staggerDelay.inMilliseconds * index,
             ),
           );
         }),
@@ -156,21 +156,24 @@ class _HabitRowState extends State<_HabitRow>
                     Icon(
                       habit.icon,
                       size: 20,
-                      color: habit.status == DayStatus.completed
-                          ? colorScheme.onSurface.withValues(alpha: 0.4)
-                          : colorScheme.onSurface,
+                      color:
+                          habit.status == DayStatus.completed
+                              ? colorScheme.onSurface.withValues(alpha: 0.4)
+                              : colorScheme.onSurface,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         habit.name,
                         style: textTheme.bodyMedium?.copyWith(
-                          decoration: habit.status == DayStatus.completed
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: habit.status == DayStatus.completed
-                              ? colorScheme.onSurface.withValues(alpha: 0.4)
-                              : habit.status == DayStatus.missed
+                          decoration:
+                              habit.status == DayStatus.completed
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                          color:
+                              habit.status == DayStatus.completed
+                                  ? colorScheme.onSurface.withValues(alpha: 0.4)
+                                  : habit.status == DayStatus.missed
                                   ? colorScheme.onSurface.withValues(alpha: 0.6)
                                   : colorScheme.onSurface,
                         ),
@@ -216,7 +219,7 @@ class _StatusIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool showProgress =
+    final showProgress =
         status == DayStatus.neutral && progress != null && progress! > 0;
 
     final Color bgColor;
@@ -240,34 +243,36 @@ class _StatusIndicator extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: showProgress
-          ? CustomPaint(
-              painter: _ProgressArcPainter(
-                progress: progress!,
-                color: color,
-                trackColor: color.withValues(alpha: 0.2),
+      child:
+          showProgress
+              ? CustomPaint(
+                painter: _ProgressArcPainter(
+                  progress: progress!,
+                  color: color,
+                  trackColor: color.withValues(alpha: 0.2),
+                ),
+                child: const SizedBox(width: 28, height: 28),
+              )
+              : AnimatedContainer(
+                duration: AnimationConstants.defaultDuration,
+                curve: AnimationConstants.defaultCurve,
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor, width: 2),
+                ),
+                child:
+                    icon != null
+                        ? AnimatedScale(
+                          scale: 1,
+                          duration: AnimationConstants.fast,
+                          curve: AnimationConstants.enterCurve,
+                          child: icon,
+                        )
+                        : null,
               ),
-              child: const SizedBox(width: 28, height: 28),
-            )
-          : AnimatedContainer(
-              duration: AnimationConstants.defaultDuration,
-              curve: AnimationConstants.defaultCurve,
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: bgColor,
-                shape: BoxShape.circle,
-                border: Border.all(color: borderColor, width: 2),
-              ),
-              child: icon != null
-                  ? AnimatedScale(
-                      scale: 1.0,
-                      duration: AnimationConstants.fast,
-                      curve: AnimationConstants.enterCurve,
-                      child: icon,
-                    )
-                  : null,
-            ),
     );
   }
 }
@@ -291,19 +296,21 @@ class _ProgressArcPainter extends CustomPainter {
     const strokeWidth = 2.5;
 
     // Track (background arc)
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+    final trackPaint =
+        Paint()
+          ..color = trackColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, radius, trackPaint);
 
     // Progress arc
-    final progressPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+    final progressPaint =
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round;
     final sweepAngle = 2 * pi * progress;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),

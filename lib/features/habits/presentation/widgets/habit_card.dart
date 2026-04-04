@@ -36,104 +36,108 @@ class HabitCard extends StatelessWidget {
     final icon = resolveHabitIcon(habit.iconName);
 
     return GestureDetector(
-      onLongPress: onDelete == null
-          ? null
-          : () async {
-              HapticFeedback.mediumImpact();
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Delete habit?'),
-                  content: Text(
-                    'Are you sure you want to delete "${habit.name}"? This will remove all its logs and cannot be undone.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      child: Text(
-                        'Delete',
-                        style: TextStyle(color: colorScheme.error),
+      onLongPress:
+          onDelete == null
+              ? null
+              : () async {
+                await HapticFeedback.mediumImpact();
+                if (!context.mounted) return;
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder:
+                      (ctx) => AlertDialog(
+                        title: const Text('Delete habit?'),
+                        content: Text(
+                          'Are you sure you want to delete "${habit.name}"? This will remove all its logs and cannot be undone.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            child: Text(
+                              'Delete',
+                              style: TextStyle(color: colorScheme.error),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              );
-              if (confirmed == true) onDelete!();
-            },
+                );
+                if (confirmed == true) onDelete!();
+              },
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         color: colorScheme.surfaceContainerLow,
         clipBehavior: Clip.antiAlias,
         child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Top row: tappable area that navigates to detail
-            InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: habitColor,
-                      shape: BoxShape.circle,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Top row: tappable area that navigates to detail
+              InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: habitColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, size: 20, color: Colors.white),
                     ),
-                    child: Icon(icon, size: 20, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          habit.name,
-                          style: textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            habit.name,
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          streak.currentStreak > 0
-                              ? '${streak.currentStreak} ${habit.frequencyType == HabitFrequency.weekly ? 'week' : 'day'} streak \u{1F525}'
-                              : 'No active streak',
-                          style: textTheme.bodySmall?.copyWith(
-                            color:
-                                colorScheme.onSurface.withValues(alpha: 0.5),
+                          const SizedBox(height: 2),
+                          Text(
+                            streak.currentStreak > 0
+                                ? '${streak.currentStreak} ${habit.frequencyType == HabitFrequency.weekly ? 'week' : 'day'} streak \u{1F525}'
+                                : 'No active streak',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  // Circular score indicator
-                  _ScoreBadge(score: score, color: habitColor),
-                ],
+                    // Circular score indicator
+                    _ScoreBadge(score: score, color: habitColor),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
-            // Day/Week indicators row — outside InkWell so each is tappable
-            if (habit.frequencyType == HabitFrequency.weekly)
-              _WeeksRow(
-                habitWithDetails: habitWithDetails,
-                habitColor: habitColor,
-              )
-            else
-              _DaysRow(
-                habitWithDetails: habitWithDetails,
-                habitColor: habitColor,
-              ),
-          ],
+              const SizedBox(height: 14),
+              // Day/Week indicators row — outside InkWell so each is tappable
+              if (habit.frequencyType == HabitFrequency.weekly)
+                _WeeksRow(
+                  habitWithDetails: habitWithDetails,
+                  habitColor: habitColor,
+                )
+              else
+                _DaysRow(
+                  habitWithDetails: habitWithDetails,
+                  habitColor: habitColor,
+                ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -227,7 +231,9 @@ class _DaysRow extends StatelessWidget {
             isHabitCompleted(logValue, threshold, targetType)) {
           // Meets target → done (green)
           status = DayStatus.completed;
-        } else if (logValue != null && logValue > 0 && isMeasurable &&
+        } else if (logValue != null &&
+            logValue > 0 &&
+            isMeasurable &&
             targetType == HabitTargetType.min) {
           // Partial progress on min-type measurable → show circle progress
           progress = completionProgress(logValue, threshold, targetType);
@@ -235,7 +241,8 @@ class _DaysRow extends StatelessWidget {
         } else if (logValue != null && logValue < 1.0) {
           // Explicitly logged as 0 → not done (red)
           status = DayStatus.missed;
-        } else if (logValue != null && isMeasurable &&
+        } else if (logValue != null &&
+            isMeasurable &&
             targetType == HabitTargetType.max) {
           // Max-type measurable with value > target → failed (red)
           status = DayStatus.missed;
@@ -256,66 +263,65 @@ class _DaysRow extends StatelessWidget {
           status: status,
           habitColor: habitColor,
           progress: progress,
-          onTap: isScheduled
-              ? () async {
-                  HapticFeedback.lightImpact();
-                  if (habit.targetValue > 1.0) {
-                    // Measurable habit: show bottom sheet
-                    final result =
-                        await showModalBottomSheet<MeasurableLogResult>(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => MeasurableLogSheet(
-                        habitName: habit.name,
-                        targetValue: habit.targetValue,
-                        targetUnit: habit.targetUnit,
-                        targetType: habit.targetType,
-                        currentValue: logValue,
-                      ),
-                    );
-                    if (result == null || !context.mounted) return;
-                    if (result.delete) {
-                      context.read<HabitsBloc>().add(
-                            HabitsEvent.deleteLog(
-                              habitId: habit.id,
-                              date: iso,
-                            ),
+          onTap:
+              isScheduled
+                  ? () async {
+                    await HapticFeedback.lightImpact();
+                    if (habit.targetValue > 1.0) {
+                      // Measurable habit: show bottom sheet
+                      if (!context.mounted) return;
+                      final result =
+                          await showModalBottomSheet<MeasurableLogResult>(
+                            context: context,
+                            isScrollControlled: true,
+                            builder:
+                                (_) => MeasurableLogSheet(
+                                  habitName: habit.name,
+                                  targetValue: habit.targetValue,
+                                  targetUnit: habit.targetUnit,
+                                  targetType: habit.targetType,
+                                  currentValue: logValue,
+                                ),
                           );
-                    } else if (result.value != null) {
-                      context.read<HabitsBloc>().add(
-                            HabitsEvent.logValue(
-                              habitId: habit.id,
-                              date: iso,
-                              value: result.value!,
-                            ),
-                          );
-                    }
-                  } else {
-                    // Yes/No habit
-                    if (isToday) {
-                      // Today: use 3-state toggle (done → failed → neutral)
-                      context.read<HabitsBloc>().add(
-                            HabitsEvent.toggleLog(
-                              habitId: habit.id,
-                              date: iso,
-                            ),
-                          );
+                      if (result == null || !context.mounted) return;
+                      if (result.delete) {
+                        context.read<HabitsBloc>().add(
+                          HabitsEvent.deleteLog(habitId: habit.id, date: iso),
+                        );
+                      } else if (result.value != null) {
+                        context.read<HabitsBloc>().add(
+                          HabitsEvent.logValue(
+                            habitId: habit.id,
+                            date: iso,
+                            value: result.value!,
+                          ),
+                        );
+                      }
                     } else {
-                      // Past days: use 2-state toggle (done ↔ failed)
-                      // This avoids the invisible "no log = red" state that
-                      // makes it look like nothing changed on the first tap.
-                      final isDone = logValue != null && logValue >= 1.0;
-                      context.read<HabitsBloc>().add(
-                            HabitsEvent.logValue(
-                              habitId: habit.id,
-                              date: iso,
-                              value: isDone ? 0.0 : 1.0,
-                            ),
-                          );
+                      if (!context.mounted) return;
+                      // Yes/No habit: toggle
+                      // Yes/No habit
+                      if (isToday) {
+                        // Today: use 3-state toggle (done → failed → neutral)
+                        context.read<HabitsBloc>().add(
+                          HabitsEvent.toggleLog(habitId: habit.id, date: iso),
+                        );
+                      } else {
+                        // Past days: use 2-state toggle (done ↔ failed)
+                        // This avoids the invisible "no log = red" state that
+                        // makes it look like nothing changed on the first tap.
+                        final isDone = logValue != null && logValue >= 1.0;
+                        context.read<HabitsBloc>().add(
+                          HabitsEvent.logValue(
+                            habitId: habit.id,
+                            date: iso,
+                            value: isDone ? 0.0 : 1.0,
+                          ),
+                        );
+                      }
                     }
                   }
-                }
-              : null,
+                  : null,
         );
       }),
     );
@@ -367,11 +373,7 @@ class _WeeksRow extends StatelessWidget {
             final iso = _formatIso(day);
             final value = logMap[iso];
             if (value != null &&
-                isHabitCompleted(
-                  value,
-                  habit.targetValue,
-                  habit.targetType,
-                )) {
+                isHabitCompleted(value, habit.targetValue, habit.targetType)) {
               completedInWeek++;
             }
           }
@@ -405,42 +407,36 @@ class _WeeksRow extends StatelessWidget {
           onTap = () async {
             HapticFeedback.lightImpact();
             if (habit.targetValue > 1.0) {
-              final result =
-                  await showModalBottomSheet<MeasurableLogResult>(
+              final result = await showModalBottomSheet<MeasurableLogResult>(
                 context: context,
                 isScrollControlled: true,
-                builder: (_) => MeasurableLogSheet(
-                  habitName: habit.name,
-                  targetValue: habit.targetValue,
-                  targetUnit: habit.targetUnit,
-                  targetType: habit.targetType,
-                  currentValue: todayLogValue,
-                ),
+                builder:
+                    (_) => MeasurableLogSheet(
+                      habitName: habit.name,
+                      targetValue: habit.targetValue,
+                      targetUnit: habit.targetUnit,
+                      targetType: habit.targetType,
+                      currentValue: todayLogValue,
+                    ),
               );
               if (result == null || !context.mounted) return;
               if (result.delete) {
                 context.read<HabitsBloc>().add(
-                      HabitsEvent.deleteLog(
-                        habitId: habit.id,
-                        date: todayIso,
-                      ),
-                    );
+                  HabitsEvent.deleteLog(habitId: habit.id, date: todayIso),
+                );
               } else if (result.value != null) {
                 context.read<HabitsBloc>().add(
-                      HabitsEvent.logValue(
-                        habitId: habit.id,
-                        date: todayIso,
-                        value: result.value!,
-                      ),
-                    );
+                  HabitsEvent.logValue(
+                    habitId: habit.id,
+                    date: todayIso,
+                    value: result.value!,
+                  ),
+                );
               }
             } else {
               context.read<HabitsBloc>().add(
-                    HabitsEvent.toggleLog(
-                      habitId: habit.id,
-                      date: todayIso,
-                    ),
-                  );
+                HabitsEvent.toggleLog(habitId: habit.id, date: todayIso),
+              );
             }
           };
         } else {
@@ -466,7 +462,7 @@ class _WeeksRow extends StatelessWidget {
   static int _isoWeekNumber(DateTime date) {
     // ISO 8601 week number
     final thursday = date.add(Duration(days: DateTime.thursday - date.weekday));
-    final jan1 = DateTime(thursday.year, 1, 1);
+    final jan1 = DateTime(thursday.year, 1);
     return ((thursday.difference(jan1).inDays) / 7).ceil() + 1;
   }
 

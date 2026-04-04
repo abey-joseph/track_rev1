@@ -13,6 +13,6 @@ double? completionProgress(
   HabitTargetType targetType,
 ) {
   if (targetType == HabitTargetType.max) return null;
-  if (target <= 0) return 1.0;
+  if (target <= 0) return 1;
   return (value / target).clamp(0.0, 1.0);
 }

@@ -86,32 +86,36 @@ class _DashboardView extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
           // Streak & score card — only rebuilds when derived values change
-          BlocSelector<HabitsBloc, HabitsState,
-              ({int bestStreak, int completed, int total})>(
+          BlocSelector<
+            HabitsBloc,
+            HabitsState,
+            ({int bestStreak, int completed, int total})
+          >(
             selector: (state) {
               if (state is! HabitsLoaded) {
                 return (bestStreak: 0, completed: 0, total: 0);
               }
               final todayWeekday = now.weekday;
-              final todayHabits = state.habits
-                  .where(
-                    (h) => h.habit.frequencyDays.contains(todayWeekday),
-                  )
-                  .toList();
-              final completed = todayHabits
-                  .where(
-                    (h) => h.recentLogs.any(
-                      (l) =>
-                          l.loggedDate == todayIso &&
-                          l.value >= h.habit.targetValue,
-                    ),
-                  )
-                  .length;
+              final todayHabits =
+                  state.habits
+                      .where(
+                        (h) => h.habit.frequencyDays.contains(todayWeekday),
+                      )
+                      .toList();
+              final completed =
+                  todayHabits
+                      .where(
+                        (h) => h.recentLogs.any(
+                          (l) =>
+                              l.loggedDate == todayIso &&
+                              l.value >= h.habit.targetValue,
+                        ),
+                      )
+                      .length;
               final bestStreak = state.habits.fold<int>(
                 0,
-                (max, h) => h.streak.currentStreak > max
-                    ? h.streak.currentStreak
-                    : max,
+                (max, h) =>
+                    h.streak.currentStreak > max ? h.streak.currentStreak : max,
               );
               return (
                 bestStreak: bestStreak,
@@ -119,11 +123,12 @@ class _DashboardView extends StatelessWidget {
                 total: todayHabits.length,
               );
             },
-            builder: (context, data) => StreakScoreCard(
-              currentStreak: data.bestStreak,
-              habitsCompleted: data.completed,
-              habitsTotal: data.total,
-            ),
+            builder:
+                (context, data) => StreakScoreCard(
+                  currentStreak: data.bestStreak,
+                  habitsCompleted: data.completed,
+                  habitsTotal: data.total,
+                ),
           ),
           const SizedBox(height: 20),
 
@@ -133,16 +138,18 @@ class _DashboardView extends StatelessWidget {
               if (prev.runtimeType != curr.runtimeType) return true;
               if (prev is HabitsLoaded && curr is HabitsLoaded) {
                 final todayWeekday = DateTime.now().weekday;
-                final prevToday = prev.habits
-                    .where(
-                      (h) => h.habit.frequencyDays.contains(todayWeekday),
-                    )
-                    .toList();
-                final currToday = curr.habits
-                    .where(
-                      (h) => h.habit.frequencyDays.contains(todayWeekday),
-                    )
-                    .toList();
+                final prevToday =
+                    prev.habits
+                        .where(
+                          (h) => h.habit.frequencyDays.contains(todayWeekday),
+                        )
+                        .toList();
+                final currToday =
+                    curr.habits
+                        .where(
+                          (h) => h.habit.frequencyDays.contains(todayWeekday),
+                        )
+                        .toList();
                 return !listEquals(prevToday, currToday);
               }
               return true;
@@ -157,9 +164,10 @@ class _DashboardView extends StatelessWidget {
                           (h) => h.habit.frequencyDays.contains(todayWeekday),
                         )
                         .map((h) {
-                          final todayLog = h.recentLogs
-                              .where((l) => l.loggedDate == todayIso)
-                              .firstOrNull;
+                          final todayLog =
+                              h.recentLogs
+                                  .where((l) => l.loggedDate == todayIso)
+                                  .firstOrNull;
 
                           final threshold = h.habit.targetValue;
                           final targetType = h.habit.targetType;
@@ -170,7 +178,10 @@ class _DashboardView extends StatelessWidget {
 
                           if (todayLog != null &&
                               isHabitCompleted(
-                                todayLog.value, threshold, targetType)) {
+                                todayLog.value,
+                                threshold,
+                                targetType,
+                              )) {
                             // Met the target → done (green check)
                             status = DayStatus.completed;
                           } else if (todayLog != null &&
@@ -180,9 +191,11 @@ class _DashboardView extends StatelessWidget {
                             // Partial progress on min-type measurable → arc
                             status = DayStatus.neutral;
                             progress = completionProgress(
-                              todayLog.value, threshold, targetType);
-                          } else if (todayLog != null &&
-                              todayLog.value < 1.0) {
+                              todayLog.value,
+                              threshold,
+                              targetType,
+                            );
+                          } else if (todayLog != null && todayLog.value < 1.0) {
                             // Explicitly marked as failed → red X
                             status = DayStatus.missed;
                           } else {
@@ -206,12 +219,10 @@ class _DashboardView extends StatelessWidget {
               }
 
               // Build a lookup for measurable habit info
-              final habitMap = state is HabitsLoaded
-                  ? {
-                      for (final h in state.habits)
-                        h.habit.id.toString(): h,
-                    }
-                  : <String, HabitWithDetails>{};
+              final habitMap =
+                  state is HabitsLoaded
+                      ? {for (final h in state.habits) h.habit.id.toString(): h}
+                      : <String, HabitWithDetails>{};
 
               return TodayHabitsSection(
                 habits: habitItems,

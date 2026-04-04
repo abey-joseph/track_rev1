@@ -1,9 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:track/core/database/app_database.dart' show Transactions;
+import 'package:track/core/database/tables/categories_table.dart';
 import 'package:track/core/database/tables/transactions_table.dart'
     show Transactions;
-
-import 'package:track/core/database/tables/categories_table.dart';
 
 /// Per-category (or overall) spending limits.
 ///

@@ -1,11 +1,11 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:track/core/constants/animation_constants.dart';
 import 'package:track/core/error/failures.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/core/router/app_router.gr.dart';
-import 'package:flutter/foundation.dart';
 import 'package:track/features/habits/domain/entities/habit_with_details.dart';
 import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
 import 'package:track/features/habits/presentation/bloc/habits_event.dart';
@@ -283,15 +283,14 @@ class _AnimatedHabitCardState extends State<_AnimatedHabitCard>
               padding: const EdgeInsets.only(bottom: 8),
               child: HabitCard(
                 habitWithDetails: habitWithDetails,
-                onTap: () => context.router.push(
-                  HabitDetailRoute(
-                    habitId: widget.habitId.toString(),
-                  ),
-                ),
+                onTap:
+                    () => context.router.push(
+                      HabitDetailRoute(habitId: widget.habitId.toString()),
+                    ),
                 onDelete: () {
                   context.read<HabitsBloc>().add(
-                        HabitsEvent.deleteHabit(habitId: widget.habitId),
-                      );
+                    HabitsEvent.deleteHabit(habitId: widget.habitId),
+                  );
                 },
               ),
             ),

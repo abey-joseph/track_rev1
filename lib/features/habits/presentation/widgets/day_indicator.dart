@@ -50,7 +50,7 @@ class DayIndicator extends StatelessWidget {
     final Color bgColor;
     final Color borderColor;
     final Widget? icon;
-    final bool showProgress =
+    final showProgress =
         status == DayStatus.neutral && progress != null && progress! > 0;
 
     switch (status) {
@@ -85,26 +85,27 @@ class DayIndicator extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          showProgress
-              ? CustomPaint(
-                painter: _ProgressArcPainter(
-                  progress: progress!,
-                  color: habitColor,
-                  trackColor: habitColor.withValues(alpha: 0.2),
-                ),
-                child: const SizedBox(width: 24, height: 24),
-              )
-              : AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: borderColor, width: 2),
-                ),
-                child: icon,
+          if (showProgress)
+            CustomPaint(
+              painter: _ProgressArcPainter(
+                progress: progress!,
+                color: habitColor,
+                trackColor: habitColor.withValues(alpha: 0.2),
               ),
+              child: const SizedBox(width: 24, height: 24),
+            )
+          else
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: borderColor, width: 2),
+              ),
+              child: icon,
+            ),
           const SizedBox(height: 2),
           Text(
             dateLabel,

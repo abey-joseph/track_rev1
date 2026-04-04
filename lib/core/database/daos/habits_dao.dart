@@ -111,12 +111,11 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
                 ..orderBy([(l) => OrderingTerm.desc(l.loggedDate)]))
               .get();
 
-      bool _isCompleted(double value) {
+      bool isCompleted(double value) {
         return isMaxType ? value <= threshold : value >= threshold;
       }
 
-      final completedLogs =
-          allLogs.where((l) => _isCompleted(l.value)).toList();
+      final completedLogs = allLogs.where((l) => isCompleted(l.value)).toList();
 
       if (completedLogs.isEmpty) {
         await into(habitStreaks).insertOnConflictUpdate(
@@ -258,10 +257,11 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
     try {
       final decoded =
           (raw.startsWith('['))
-              ? (raw.substring(
-                1,
-                raw.length - 1,
-              )).split(',').map((s) => int.parse(s.trim())).toList()
+              ? raw
+                  .substring(1, raw.length - 1)
+                  .split(',')
+                  .map((s) => int.parse(s.trim()))
+                  .toList()
               : [1, 2, 3, 4, 5, 6, 7];
       return decoded;
     } catch (_) {
