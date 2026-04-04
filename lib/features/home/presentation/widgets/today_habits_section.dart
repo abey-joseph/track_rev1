@@ -1,6 +1,10 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:track/core/constants/animation_constants.dart';
+import 'package:track/core/theme/app_colors.dart';
+import 'package:track/features/habits/presentation/widgets/day_indicator.dart';
 
 class TodayHabitsSection extends StatelessWidget {
   const TodayHabitsSection({
@@ -139,9 +143,10 @@ class _HabitRowState extends State<_HabitRow>
                 ),
                 child: Row(
                   children: [
-                    _AnimatedCheckbox(
-                      isChecked: habit.isCompleted,
+                    _StatusIndicator(
+                      status: habit.status,
                       color: habit.color,
+                      progress: habit.progress,
                       onTap: () {
                         HapticFeedback.mediumImpact();
                         widget.onToggle();
@@ -151,7 +156,7 @@ class _HabitRowState extends State<_HabitRow>
                     Icon(
                       habit.icon,
                       size: 20,
-                      color: habit.isCompleted
+                      color: habit.status == DayStatus.completed
                           ? colorScheme.onSurface.withValues(alpha: 0.4)
                           : colorScheme.onSurface,
                     ),
@@ -160,12 +165,14 @@ class _HabitRowState extends State<_HabitRow>
                       child: Text(
                         habit.name,
                         style: textTheme.bodyMedium?.copyWith(
-                          decoration: habit.isCompleted
+                          decoration: habit.status == DayStatus.completed
                               ? TextDecoration.lineThrough
                               : null,
-                          color: habit.isCompleted
+                          color: habit.status == DayStatus.completed
                               ? colorScheme.onSurface.withValues(alpha: 0.4)
-                              : colorScheme.onSurface,
+                              : habit.status == DayStatus.missed
+                                  ? colorScheme.onSurface.withValues(alpha: 0.6)
+                                  : colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -187,47 +194,131 @@ class _HabitRowState extends State<_HabitRow>
   }
 }
 
-class _AnimatedCheckbox extends StatelessWidget {
-  const _AnimatedCheckbox({
-    required this.isChecked,
+/// Tri-state indicator matching the DayIndicator visual style:
+///   completed → green bg + white check
+///   missed    → red bg + white X
+///   neutral + progress → circular progress arc
+///   neutral   → transparent bg + faint border (blank)
+class _StatusIndicator extends StatelessWidget {
+  const _StatusIndicator({
+    required this.status,
     required this.color,
     required this.onTap,
+    this.progress,
   });
 
-  final bool isChecked;
+  final DayStatus status;
   final Color color;
   final VoidCallback onTap;
 
+  /// Progress fraction (0.0–1.0) for partial completion on measurable habits.
+  final double? progress;
+
   @override
   Widget build(BuildContext context) {
+    final bool showProgress =
+        status == DayStatus.neutral && progress != null && progress! > 0;
+
+    final Color bgColor;
+    final Color borderColor;
+    final Widget? icon;
+
+    switch (status) {
+      case DayStatus.completed:
+        bgColor = AppColors.success;
+        borderColor = AppColors.success;
+        icon = const Icon(Icons.check_rounded, size: 16, color: Colors.white);
+      case DayStatus.missed:
+        bgColor = AppColors.error;
+        borderColor = AppColors.error;
+        icon = const Icon(Icons.close_rounded, size: 16, color: Colors.white);
+      case DayStatus.neutral:
+        bgColor = Colors.transparent;
+        borderColor = color.withValues(alpha: 0.3);
+        icon = null;
+    }
+
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: AnimationConstants.defaultDuration,
-        curve: AnimationConstants.defaultCurve,
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: isChecked ? color : Colors.transparent,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isChecked ? color : color.withValues(alpha: 0.4),
-            width: 2,
-          ),
-        ),
-        child: AnimatedScale(
-          scale: isChecked ? 1.0 : 0.0,
-          duration: AnimationConstants.fast,
-          curve: AnimationConstants.enterCurve,
-          child: Icon(
-            Icons.check_rounded,
-            size: 18,
-            color: Theme.of(context).colorScheme.onPrimary,
-          ),
-        ),
-      ),
+      child: showProgress
+          ? CustomPaint(
+              painter: _ProgressArcPainter(
+                progress: progress!,
+                color: color,
+                trackColor: color.withValues(alpha: 0.2),
+              ),
+              child: const SizedBox(width: 28, height: 28),
+            )
+          : AnimatedContainer(
+              duration: AnimationConstants.defaultDuration,
+              curve: AnimationConstants.defaultCurve,
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: borderColor, width: 2),
+              ),
+              child: icon != null
+                  ? AnimatedScale(
+                      scale: 1.0,
+                      duration: AnimationConstants.fast,
+                      curve: AnimationConstants.enterCurve,
+                      child: icon,
+                    )
+                  : null,
+            ),
     );
   }
+}
+
+/// Paints a circular progress arc for partial completion.
+class _ProgressArcPainter extends CustomPainter {
+  _ProgressArcPainter({
+    required this.progress,
+    required this.color,
+    required this.trackColor,
+  });
+
+  final double progress;
+  final Color color;
+  final Color trackColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - 4) / 2; // 2px stroke on each side
+    const strokeWidth = 2.5;
+
+    // Track (background arc)
+    final trackPaint = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(center, radius, trackPaint);
+
+    // Progress arc
+    final progressPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    final sweepAngle = 2 * pi * progress;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2, // start from top
+      sweepAngle,
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ProgressArcPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.color != color ||
+      oldDelegate.trackColor != trackColor;
 }
 
 class HabitItem {
@@ -236,7 +327,8 @@ class HabitItem {
     required this.name,
     required this.icon,
     required this.color,
-    this.isCompleted = false,
+    this.status = DayStatus.neutral,
+    this.progress,
     this.subtitle,
   });
 
@@ -244,6 +336,11 @@ class HabitItem {
   final String name;
   final IconData icon;
   final Color color;
-  final bool isCompleted;
+  final DayStatus status;
+
+  /// Progress fraction (0.0–1.0) for partial completion on min-type measurable
+  /// habits. When non-null and > 0, a circular progress arc is shown instead of
+  /// the blank neutral circle.
+  final double? progress;
   final String? subtitle;
 }

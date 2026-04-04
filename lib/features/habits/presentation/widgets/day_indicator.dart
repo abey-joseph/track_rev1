@@ -44,6 +44,9 @@ class DayIndicator extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final textTheme = context.textTheme;
 
+    // If onTap is null, this day is disabled (not scheduled for custom frequency)
+    final isDisabled = onTap == null;
+
     final Color bgColor;
     final Color borderColor;
     final Widget? icon;
@@ -61,7 +64,8 @@ class DayIndicator extends StatelessWidget {
         icon = const Icon(Icons.close_rounded, size: 14, color: Colors.white);
       case DayStatus.neutral:
         bgColor = Colors.transparent;
-        borderColor = habitColor.withValues(alpha: 0.3);
+        // Reduce opacity for disabled days
+        borderColor = habitColor.withValues(alpha: isDisabled ? 0.1 : 0.3);
         icon = null;
     }
 
@@ -74,36 +78,40 @@ class DayIndicator extends StatelessWidget {
           Text(
             dayLabel,
             style: textTheme.labelSmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.5),
+              color: colorScheme.onSurface.withValues(
+                alpha: isDisabled ? 0.25 : 0.5,
+              ),
               fontSize: 10,
             ),
           ),
           const SizedBox(height: 4),
           showProgress
               ? CustomPaint(
-                  painter: _ProgressArcPainter(
-                    progress: progress!,
-                    color: habitColor,
-                    trackColor: habitColor.withValues(alpha: 0.2),
-                  ),
-                  child: const SizedBox(width: 24, height: 24),
-                )
-              : AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: borderColor, width: 2),
-                  ),
-                  child: icon,
+                painter: _ProgressArcPainter(
+                  progress: progress!,
+                  color: habitColor,
+                  trackColor: habitColor.withValues(alpha: 0.2),
                 ),
+                child: const SizedBox(width: 24, height: 24),
+              )
+              : AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor, width: 2),
+                ),
+                child: icon,
+              ),
           const SizedBox(height: 2),
           Text(
             dateLabel,
             style: textTheme.labelSmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.4),
+              color: colorScheme.onSurface.withValues(
+                alpha: isDisabled ? 0.2 : 0.4,
+              ),
               fontSize: 10,
             ),
           ),
@@ -131,19 +139,21 @@ class _ProgressArcPainter extends CustomPainter {
     const strokeWidth = 2.5;
 
     // Track (background arc)
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+    final trackPaint =
+        Paint()
+          ..color = trackColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, radius, trackPaint);
 
     // Progress arc
-    final progressPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+    final progressPaint =
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round;
     final sweepAngle = 2 * pi * progress;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),

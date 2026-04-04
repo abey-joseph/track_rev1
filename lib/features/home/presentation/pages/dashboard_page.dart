@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/core/router/app_router.gr.dart';
+import 'package:flutter/foundation.dart';
 import 'package:track/features/habits/domain/entities/habit_with_details.dart';
 import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
 import 'package:track/features/habits/presentation/bloc/habits_event.dart';
 import 'package:track/features/habits/presentation/bloc/habits_state.dart';
 import 'package:track/features/habits/presentation/utils/habit_icon_resolver.dart';
+import 'package:track/features/habits/domain/entities/habit_entity.dart';
+import 'package:track/features/habits/domain/helpers/completion_helpers.dart';
+import 'package:track/features/habits/presentation/widgets/day_indicator.dart';
 import 'package:track/features/home/presentation/widgets/ai_insight_card.dart';
 import 'package:track/features/home/presentation/widgets/recent_activity_feed.dart';
 import 'package:track/features/home/presentation/widgets/spending_summary_card.dart';
@@ -81,62 +85,65 @@ class _DashboardView extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
-          // Streak & score card
-          BlocBuilder<HabitsBloc, HabitsState>(
-            buildWhen: (prev, curr) {
-              if (prev.runtimeType != curr.runtimeType) return true;
-              if (prev is HabitsLoaded && curr is HabitsLoaded) {
-                return prev.habits != curr.habits;
+          // Streak & score card — only rebuilds when derived values change
+          BlocSelector<HabitsBloc, HabitsState,
+              ({int bestStreak, int completed, int total})>(
+            selector: (state) {
+              if (state is! HabitsLoaded) {
+                return (bestStreak: 0, completed: 0, total: 0);
               }
-              return true;
-            },
-            builder: (context, state) {
-              if (state is HabitsLoaded) {
-                final todayWeekday = now.weekday;
-                final todayHabits =
-                    state.habits
-                        .where(
-                          (h) => h.habit.frequencyDays.contains(todayWeekday),
-                        )
-                        .toList();
-                final completed =
-                    todayHabits
-                        .where(
-                          (h) => h.recentLogs.any(
-                            (l) =>
-                                l.loggedDate == todayIso &&
-                                l.value >= h.habit.targetValue,
-                          ),
-                        )
-                        .length;
-                final bestStreak = state.habits.fold<int>(
-                  0,
-                  (max, h) =>
-                      h.streak.currentStreak > max
-                          ? h.streak.currentStreak
-                          : max,
-                );
-                return StreakScoreCard(
-                  currentStreak: bestStreak,
-                  habitsCompleted: completed,
-                  habitsTotal: todayHabits.length,
-                );
-              }
-              return const StreakScoreCard(
-                currentStreak: 0,
-                habitsCompleted: 0,
-                habitsTotal: 0,
+              final todayWeekday = now.weekday;
+              final todayHabits = state.habits
+                  .where(
+                    (h) => h.habit.frequencyDays.contains(todayWeekday),
+                  )
+                  .toList();
+              final completed = todayHabits
+                  .where(
+                    (h) => h.recentLogs.any(
+                      (l) =>
+                          l.loggedDate == todayIso &&
+                          l.value >= h.habit.targetValue,
+                    ),
+                  )
+                  .length;
+              final bestStreak = state.habits.fold<int>(
+                0,
+                (max, h) => h.streak.currentStreak > max
+                    ? h.streak.currentStreak
+                    : max,
+              );
+              return (
+                bestStreak: bestStreak,
+                completed: completed,
+                total: todayHabits.length,
               );
             },
+            builder: (context, data) => StreakScoreCard(
+              currentStreak: data.bestStreak,
+              habitsCompleted: data.completed,
+              habitsTotal: data.total,
+            ),
           ),
           const SizedBox(height: 20),
 
-          // Today's habits
+          // Today's habits — only rebuilds when today-relevant habits change
           BlocBuilder<HabitsBloc, HabitsState>(
             buildWhen: (prev, curr) {
               if (prev.runtimeType != curr.runtimeType) return true;
               if (prev is HabitsLoaded && curr is HabitsLoaded) {
-                return prev.habits != curr.habits;
+                final todayWeekday = DateTime.now().weekday;
+                final prevToday = prev.habits
+                    .where(
+                      (h) => h.habit.frequencyDays.contains(todayWeekday),
+                    )
+                    .toList();
+                final currToday = curr.habits
+                    .where(
+                      (h) => h.habit.frequencyDays.contains(todayWeekday),
+                    )
+                    .toList();
+                return !listEquals(prevToday, currToday);
               }
               return true;
             },
@@ -150,17 +157,46 @@ class _DashboardView extends StatelessWidget {
                           (h) => h.habit.frequencyDays.contains(todayWeekday),
                         )
                         .map((h) {
-                          final isCompleted = h.recentLogs.any(
-                            (l) =>
-                                l.loggedDate == todayIso &&
-                                l.value >= h.habit.targetValue,
-                          );
+                          final todayLog = h.recentLogs
+                              .where((l) => l.loggedDate == todayIso)
+                              .firstOrNull;
+
+                          final threshold = h.habit.targetValue;
+                          final targetType = h.habit.targetType;
+                          final isMeasurable = threshold > 1.0;
+
+                          final DayStatus status;
+                          double? progress;
+
+                          if (todayLog != null &&
+                              isHabitCompleted(
+                                todayLog.value, threshold, targetType)) {
+                            // Met the target → done (green check)
+                            status = DayStatus.completed;
+                          } else if (todayLog != null &&
+                              todayLog.value > 0 &&
+                              isMeasurable &&
+                              targetType == HabitTargetType.min) {
+                            // Partial progress on min-type measurable → arc
+                            status = DayStatus.neutral;
+                            progress = completionProgress(
+                              todayLog.value, threshold, targetType);
+                          } else if (todayLog != null &&
+                              todayLog.value < 1.0) {
+                            // Explicitly marked as failed → red X
+                            status = DayStatus.missed;
+                          } else {
+                            // No log yet → neutral (blank)
+                            status = DayStatus.neutral;
+                          }
+
                           return HabitItem(
                             id: h.habit.id.toString(),
                             name: h.habit.name,
                             icon: resolveHabitIcon(h.habit.iconName),
                             color: _parseColor(h.habit.colorHex),
-                            isCompleted: isCompleted,
+                            status: status,
+                            progress: progress,
                             subtitle: h.habit.targetUnit,
                           );
                         })

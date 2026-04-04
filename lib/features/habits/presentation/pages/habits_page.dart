@@ -5,6 +5,7 @@ import 'package:track/core/constants/animation_constants.dart';
 import 'package:track/core/error/failures.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/core/router/app_router.gr.dart';
+import 'package:flutter/foundation.dart';
 import 'package:track/features/habits/domain/entities/habit_with_details.dart';
 import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
 import 'package:track/features/habits/presentation/bloc/habits_event.dart';
@@ -41,23 +42,17 @@ class _HabitsView extends StatelessWidget {
         ],
       ),
       body: BlocBuilder<HabitsBloc, HabitsState>(
-        buildWhen: (prev, curr) {
-          // Only rebuild when the state type changes or the habits list differs
-          if (prev.runtimeType != curr.runtimeType) return true;
-          if (prev is HabitsLoaded && curr is HabitsLoaded) {
-            return prev.habits != curr.habits;
-          }
-          return true;
-        },
+        // Only rebuild on state-type transitions, not on habit data changes.
+        buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
         builder:
             (context, state) => switch (state) {
               HabitsInitial() || HabitsLoading() => const Center(
                 child: CircularProgressIndicator(),
               ),
-              HabitsLoaded(:final habits) =>
-                habits.isEmpty
-                    ? _buildEmptyState(colorScheme, textTheme)
-                    : _buildHabitsList(context, habits),
+              HabitsLoaded() => _HabitsListSelector(
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
               HabitsError(:final failure) => Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -96,8 +91,90 @@ class _HabitsView extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildEmptyState(ColorScheme colorScheme, TextTheme textTheme) {
+/// Selects only the list of habit IDs from the BLoC state.
+/// The ListView only rebuilds if habits are added, removed, or reordered —
+/// not when an individual habit's log data changes.
+class _HabitsListSelector extends StatelessWidget {
+  const _HabitsListSelector({
+    required this.colorScheme,
+    required this.textTheme,
+  });
+
+  final ColorScheme colorScheme;
+  final TextTheme textTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<HabitsBloc, HabitsState>(
+      buildWhen: (prev, curr) {
+        if (prev.runtimeType != curr.runtimeType) return true;
+        if (prev is HabitsLoaded && curr is HabitsLoaded) {
+          // Only rebuild the list when habit IDs change (add/remove/reorder),
+          // not when individual habit data changes.
+          final prevIds = prev.habits.map((h) => h.habit.id).toList();
+          final currIds = curr.habits.map((h) => h.habit.id).toList();
+          return !listEquals(prevIds, currIds);
+        }
+        return true;
+      },
+      builder: (context, state) {
+        if (state is! HabitsLoaded || state.habits.isEmpty) {
+          return _buildEmptyState(colorScheme, textTheme);
+        }
+        final habitIds = state.habits.map((h) => h.habit.id).toList();
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          itemCount: habitIds.length + 1, // +1 for bottom spacer with quote
+          itemBuilder: (context, index) {
+            if (index < habitIds.length) {
+              return _AnimatedHabitCard(
+                key: ValueKey(habitIds[index]),
+                habitId: habitIds[index],
+                index: index,
+              );
+            }
+            // Bottom spacer with quote — keeps last card above the FAB
+            final quote = (_habitQuotes.toList()..shuffle()).first;
+            return Padding(
+              padding: const EdgeInsets.only(top: 24, bottom: 100),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.format_quote_rounded,
+                    size: 28,
+                    color: colorScheme.onSurface.withValues(alpha: 0.12),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    quote.$1,
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.25),
+                      fontStyle: FontStyle.italic,
+                      height: 1.6,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '— ${quote.$2}',
+                    textAlign: TextAlign.center,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.2),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static Widget _buildEmptyState(ColorScheme colorScheme, TextTheme textTheme) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -125,75 +202,17 @@ class _HabitsView extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildHabitsList(BuildContext context, List<HabitWithDetails> habits) {
-    final colorScheme = context.colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: habits.length + 1, // +1 for bottom spacer with quote
-      itemBuilder: (context, index) {
-        if (index < habits.length) {
-          return _AnimatedHabitCard(
-            key: ValueKey(habits[index].habit.id),
-            habitWithDetails: habits[index],
-            index: index,
-            onTap:
-                () => context.router.push(
-                  HabitDetailRoute(habitId: habits[index].habit.id.toString()),
-                ),
-          );
-        }
-        // Bottom spacer with quote — keeps last card above the FAB
-        final quote = (_habitQuotes.toList()..shuffle()).first;
-        return Padding(
-          padding: const EdgeInsets.only(top: 24, bottom: 100),
-          child: Column(
-            children: [
-              Icon(
-                Icons.format_quote_rounded,
-                size: 28,
-                color: colorScheme.onSurface.withValues(alpha: 0.12),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                quote.$1,
-                textAlign: TextAlign.center,
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.25),
-                  fontStyle: FontStyle.italic,
-                  height: 1.6,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '— ${quote.$2}',
-                textAlign: TextAlign.center,
-                style: textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.2),
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }
 
 class _AnimatedHabitCard extends StatefulWidget {
   const _AnimatedHabitCard({
-    required this.habitWithDetails,
+    required this.habitId,
     required this.index,
-    required this.onTap,
     super.key,
   });
 
-  final HabitWithDetails habitWithDetails;
+  final int habitId;
   final int index;
-  final VoidCallback onTap;
 
   @override
   State<_AnimatedHabitCard> createState() => _AnimatedHabitCardState();
@@ -245,25 +264,40 @@ class _AnimatedHabitCardState extends State<_AnimatedHabitCard>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: HabitCard(
-            habitWithDetails: widget.habitWithDetails,
-            onTap: widget.onTap,
-            onDelete: () {
-              context.read<HabitsBloc>().add(
-                    HabitsEvent.deleteHabit(
-                      habitId: widget.habitWithDetails.habit.id,
-                    ),
-                  );
-            },
+    // Each card selects only its own HabitWithDetails by ID.
+    // Only this card rebuilds when its specific habit data changes.
+    return BlocSelector<HabitsBloc, HabitsState, HabitWithDetails?>(
+      selector: (state) {
+        if (state is! HabitsLoaded) return null;
+        return state.habits
+            .where((h) => h.habit.id == widget.habitId)
+            .firstOrNull;
+      },
+      builder: (context, habitWithDetails) {
+        if (habitWithDetails == null) return const SizedBox.shrink();
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: HabitCard(
+                habitWithDetails: habitWithDetails,
+                onTap: () => context.router.push(
+                  HabitDetailRoute(
+                    habitId: widget.habitId.toString(),
+                  ),
+                ),
+                onDelete: () {
+                  context.read<HabitsBloc>().add(
+                        HabitsEvent.deleteHabit(habitId: widget.habitId),
+                      );
+                },
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
