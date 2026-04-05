@@ -7,6 +7,8 @@ import 'package:track/features/auth/presentation/bloc/auth_state.dart';
 import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
 import 'package:track/features/habits/presentation/bloc/habits_event.dart';
 import 'package:track/features/home/presentation/widgets/quick_add_fab.dart';
+import 'package:track/features/money/presentation/bloc/money_bloc.dart';
+import 'package:track/features/money/presentation/bloc/money_event.dart';
 import 'package:track/injection.dart';
 
 @RoutePage()
@@ -18,9 +20,17 @@ class AppShellPage extends StatelessWidget {
     final authState = context.read<AuthBloc>().state;
     final userId = authState is Authenticated ? authState.user.uid : '';
 
-    return BlocProvider(
-      create: (_) => getIt<HabitsBloc>()
-        ..add(HabitsEvent.loadRequested(userId: userId)),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => getIt<HabitsBloc>()
+            ..add(HabitsEvent.loadRequested(userId: userId)),
+        ),
+        BlocProvider(
+          create: (_) => getIt<MoneyBloc>()
+            ..add(MoneyEvent.loadRequested(userId: userId)),
+        ),
+      ],
       child: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           state.whenOrNull(

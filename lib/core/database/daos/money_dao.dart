@@ -62,8 +62,20 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
   Future<bool> updateCategory(CategoriesCompanion entry) =>
       update(categories).replace(entry);
 
+  Future<Category?> getCategoryById(int id) =>
+      (select(categories)..where((c) => c.id.equals(id))).getSingleOrNull();
+
   Future<int> deleteCategory(int id) =>
       (delete(categories)..where((c) => c.id.equals(id))).go();
+
+  Future<int> getAccountCount(String userId) async {
+    final countExpr = accounts.id.count();
+    final query = selectOnly(accounts)
+      ..addColumns([countExpr])
+      ..where(accounts.userId.equals(userId));
+    final row = await query.getSingle();
+    return row.read(countExpr)!;
+  }
 
   // ── Transactions ─────────────────────────────────────────────────────────
 
