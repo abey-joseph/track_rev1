@@ -10,12 +10,16 @@ class AuthGuard extends AutoRouteGuard {
   final AuthRepository _authRepository;
 
   @override
-  void onNavigation(NavigationResolver resolver, StackRouter router) {
+  Future<void> onNavigation(
+    NavigationResolver resolver,
+    StackRouter router,
+  ) async {
     final result = _authRepository.currentUser;
     if (result != null) {
       resolver.next();
     } else {
-      resolver.redirect(const LoginRoute());
+      await router.replace(const LoginRoute());
+      resolver.next(false);
     }
   }
 }

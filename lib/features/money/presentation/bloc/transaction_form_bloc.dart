@@ -35,31 +35,37 @@ class TransactionFormBloc
     TransactionFormInitialized event,
     Emitter<TransactionFormState> emit,
   ) async {
-    final accountsResult =
-        await _getAccounts(UserIdParams(userId: event.userId));
-    final categoriesResult =
-        await _getCategories(UserIdParams(userId: event.userId));
+    final accountsResult = await _getAccounts(
+      UserIdParams(userId: event.userId),
+    );
+    final categoriesResult = await _getCategories(
+      UserIdParams(userId: event.userId),
+    );
 
     final accounts = accountsResult.getOrElse((_) => []);
     final categories = categoriesResult.getOrElse((_) => []);
 
-    emit(state.copyWith(
-      availableAccounts: accounts,
-      allCategories: categories,
-      accountId: accounts.isNotEmpty ? accounts.first.id : null,
-      date: DateTime.now(),
-    ));
+    emit(
+      state.copyWith(
+        availableAccounts: accounts,
+        allCategories: categories,
+        accountId: accounts.isNotEmpty ? accounts.first.id : null,
+        date: DateTime.now(),
+      ),
+    );
   }
 
   void _onTypeChanged(
     TransactionFormTypeChanged event,
     Emitter<TransactionFormState> emit,
   ) {
-    emit(state.copyWith(
-      type: event.type,
-      categoryId: null,
-      errorMessage: null,
-    ));
+    emit(
+      state.copyWith(
+        type: event.type,
+        categoryId: null,
+        errorMessage: null,
+      ),
+    );
   }
 
   void _onAmountChanged(
@@ -151,10 +157,12 @@ class TransactionFormBloc
     final result = await _createTransaction(transaction);
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSubmitting: false,
-        errorMessage: 'Failed to save transaction. Please try again.',
-      )),
+      (failure) => emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: 'Failed to save transaction. Please try again.',
+        ),
+      ),
       (_) => emit(state.copyWith(isSubmitting: false, isSuccess: true)),
     );
   }

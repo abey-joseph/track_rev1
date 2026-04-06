@@ -138,22 +138,22 @@ class _HabitFormView extends StatelessWidget {
           ],
         ),
         body: const SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(20, 8, 20, 40),
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _HabitPreviewHeader(),
-              SizedBox(height: 28),
+              SizedBox(height: 14),
               _NameField(),
-              SizedBox(height: 20),
+              SizedBox(height: 10),
               _DescriptionField(),
-              SizedBox(height: 28),
+              SizedBox(height: 14),
               _IconColorSection(),
-              SizedBox(height: 28),
+              SizedBox(height: 14),
               _FrequencySection(),
-              SizedBox(height: 28),
+              SizedBox(height: 14),
               _TargetSection(),
-              SizedBox(height: 28),
+              SizedBox(height: 14),
               _ReminderSection(),
             ],
           ),
@@ -192,7 +192,7 @@ class _HabitPreviewHeader extends StatelessWidget {
 
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -205,39 +205,33 @@ class _HabitPreviewHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
-          child: Column(
+          child: Row(
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOutCubic,
-                width: 64,
-                height: 64,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: color,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.35),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
                 ),
-                child: Icon(icon, size: 30, color: Colors.white),
+                child: Icon(icon, size: 20, color: Colors.white),
               ),
-              const SizedBox(height: 14),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Text(
-                  name,
-                  key: ValueKey(name),
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
+              const SizedBox(width: 12),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    name,
+                    key: ValueKey(name),
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -323,7 +317,7 @@ class _DescriptionField extends StatelessWidget {
           ),
         ),
       ),
-      maxLines: 2,
+      maxLines: 1,
       textCapitalization: TextCapitalization.sentences,
     );
   }
@@ -336,8 +330,8 @@ class _IconColorSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = context.textTheme;
     final colorScheme = context.colorScheme;
+    final textTheme = context.textTheme;
 
     return BlocBuilder<HabitFormBloc, HabitFormState>(
       buildWhen:
@@ -345,6 +339,7 @@ class _IconColorSection extends StatelessWidget {
               prev.iconName != curr.iconName || prev.colorHex != curr.colorHex,
       builder: (context, state) {
         final selectedColor = _parseColor(state.colorHex);
+        final selectedIcon = resolveHabitIcon(state.iconName);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,139 +348,228 @@ class _IconColorSection extends StatelessWidget {
               title: 'Appearance',
               icon: Icons.palette_outlined,
             ),
-            const SizedBox(height: 12),
-            // Color picker
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Color',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _AppearancePickerTile(
+                    label: 'Color',
+                    onTap: () => _showColorPicker(context, state),
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: selectedColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: colorScheme.outline.withValues(alpha: 0.2),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children:
-                        _habitColors.map((hex) {
-                          final color = _parseColor(hex);
-                          final isSelected = hex == state.colorHex;
-                          return GestureDetector(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              context.read<HabitFormBloc>().add(
-                                HabitFormEvent.colorChanged(colorHex: hex),
-                              );
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                                border:
-                                    isSelected
-                                        ? Border.all(
-                                          color: colorScheme.onSurface,
-                                          width: 2.5,
-                                        )
-                                        : null,
-                                boxShadow:
-                                    isSelected
-                                        ? [
-                                          BoxShadow(
-                                            color: color.withValues(alpha: 0.4),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                        : null,
-                              ),
-                              child:
-                                  isSelected
-                                      ? const Icon(
-                                        Icons.check_rounded,
-                                        size: 18,
-                                        color: Colors.white,
-                                      )
-                                      : null,
-                            ),
-                          );
-                        }).toList(),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Icon picker
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Icon',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _AppearancePickerTile(
+                    label: 'Icon',
+                    onTap: () => _showIconPicker(context, state),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: selectedColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(selectedIcon, size: 18, color: selectedColor),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children:
-                        _habitIcons.map((iconName) {
-                          final icon = resolveHabitIcon(iconName);
-                          final isSelected = iconName == state.iconName;
-                          return GestureDetector(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              context.read<HabitFormBloc>().add(
-                                HabitFormEvent.iconChanged(iconName: iconName),
-                              );
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color:
-                                    isSelected
-                                        ? selectedColor
-                                        : colorScheme.surfaceContainerHigh,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                icon,
-                                size: 22,
-                                color:
-                                    isSelected
-                                        ? Colors.white
-                                        : colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         );
       },
+    );
+  }
+
+  void _showColorPicker(BuildContext context, HabitFormState state) {
+    final bloc = context.read<HabitFormBloc>();
+    showModalBottomSheet<void>(
+      context: context,
+      builder:
+          (_) => Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Choose Color',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children:
+                      _habitColors.map((hex) {
+                        final color = _parseColor(hex);
+                        final isSelected = hex == state.colorHex;
+                        return GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            bloc.add(
+                              HabitFormEvent.colorChanged(colorHex: hex),
+                            );
+                            Navigator.pop(context);
+                          },
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border:
+                                  isSelected
+                                      ? Border.all(
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                        width: 2.5,
+                                      )
+                                      : null,
+                            ),
+                            child:
+                                isSelected
+                                    ? const Icon(
+                                      Icons.check_rounded,
+                                      size: 20,
+                                      color: Colors.white,
+                                    )
+                                    : null,
+                          ),
+                        );
+                      }).toList(),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+
+  void _showIconPicker(BuildContext context, HabitFormState state) {
+    final bloc = context.read<HabitFormBloc>();
+    final selectedColor = _parseColor(state.colorHex);
+    showModalBottomSheet<void>(
+      context: context,
+      builder:
+          (_) => Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Choose Icon',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children:
+                      _habitIcons.map((iconName) {
+                        final icon = resolveHabitIcon(iconName);
+                        final isSelected = iconName == state.iconName;
+                        return GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            bloc.add(
+                              HabitFormEvent.iconChanged(iconName: iconName),
+                            );
+                            Navigator.pop(context);
+                          },
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color:
+                                  isSelected
+                                      ? selectedColor
+                                      : Theme.of(
+                                        context,
+                                      ).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              icon,
+                              size: 22,
+                              color:
+                                  isSelected
+                                      ? Colors.white
+                                      : Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+}
+
+class _AppearancePickerTile extends StatelessWidget {
+  const _AppearancePickerTile({
+    required this.label,
+    required this.onTap,
+    required this.child,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    final textTheme = context.textTheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            child,
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const Spacer(),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -516,9 +600,9 @@ class _FrequencySection extends StatelessWidget {
               title: 'Frequency',
               icon: Icons.calendar_today_outlined,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(16),
@@ -531,17 +615,14 @@ class _FrequencySection extends StatelessWidget {
                       ButtonSegment(
                         value: HabitFrequency.daily,
                         label: Text('Daily'),
-                        icon: Icon(Icons.repeat_rounded, size: 18),
                       ),
                       ButtonSegment(
                         value: HabitFrequency.weekly,
                         label: Text('Weekly'),
-                        icon: Icon(Icons.view_week_rounded, size: 18),
                       ),
                       ButtonSegment(
                         value: HabitFrequency.custom,
                         label: Text('Custom'),
-                        icon: Icon(Icons.tune_rounded, size: 18),
                       ),
                     ],
                     selected: {state.frequencyType},
@@ -583,8 +664,8 @@ class _FrequencySection extends StatelessWidget {
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            width: 40,
-                            height: 40,
+                            width: 34,
+                            height: 34,
                             decoration: BoxDecoration(
                               color:
                                   isSelected ? accentColor : Colors.transparent,
@@ -652,9 +733,9 @@ class _TargetSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const _SectionHeader(title: 'Goal', icon: Icons.flag_outlined),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(16),
@@ -667,7 +748,6 @@ class _TargetSection extends StatelessWidget {
                       Expanded(
                         child: _GoalTypeChip(
                           label: 'Yes / No',
-                          subtitle: 'Just check it off',
                           icon: Icons.check_circle_outline_rounded,
                           isSelected: !isQuantitative,
                           onTap: () {
@@ -684,7 +764,6 @@ class _TargetSection extends StatelessWidget {
                       Expanded(
                         child: _GoalTypeChip(
                           label: 'Measurable',
-                          subtitle: 'Track a quantity',
                           icon: Icons.bar_chart_rounded,
                           isSelected: isQuantitative,
                           onTap: () {
@@ -708,10 +787,8 @@ class _TargetSection extends StatelessWidget {
                         Expanded(
                           child: _GoalTypeChip(
                             label: 'At least',
-                            subtitle: 'Minimum target',
                             icon: Icons.arrow_upward_rounded,
-                            isSelected:
-                                state.targetType == HabitTargetType.min,
+                            isSelected: state.targetType == HabitTargetType.min,
                             onTap: () {
                               HapticFeedback.selectionClick();
                               context.read<HabitFormBloc>().add(
@@ -726,10 +803,8 @@ class _TargetSection extends StatelessWidget {
                         Expanded(
                           child: _GoalTypeChip(
                             label: 'At most',
-                            subtitle: 'Maximum target',
                             icon: Icons.arrow_downward_rounded,
-                            isSelected:
-                                state.targetType == HabitTargetType.max,
+                            isSelected: state.targetType == HabitTargetType.max,
                             onTap: () {
                               HapticFeedback.selectionClick();
                               context.read<HabitFormBloc>().add(
@@ -829,14 +904,12 @@ class _TargetSection extends StatelessWidget {
 class _GoalTypeChip extends StatelessWidget {
   const _GoalTypeChip({
     required this.label,
-    required this.subtitle,
     required this.icon,
     required this.isSelected,
     required this.onTap,
   });
 
   final String label;
-  final String subtitle;
   final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
@@ -850,7 +923,7 @@ class _GoalTypeChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
         decoration: BoxDecoration(
           color:
               isSelected
@@ -866,27 +939,19 @@ class _GoalTypeChip extends StatelessWidget {
           children: [
             Icon(
               icon,
-              size: 26,
+              size: 20,
               color:
                   isSelected
                       ? colorScheme.primary
                       : colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               label,
               style: textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: isSelected ? colorScheme.primary : colorScheme.onSurface,
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: textTheme.labelSmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -918,7 +983,7 @@ class _ReminderSection extends StatelessWidget {
               title: 'Reminder',
               icon: Icons.notifications_outlined,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(

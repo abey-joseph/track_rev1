@@ -10,18 +10,15 @@ class UserSettings extends Table {
   TextColumn get userId => text()();
   TextColumn get displayName => text().nullable()();
   TextColumn get avatarUrl => text().nullable()();
-  TextColumn get currency =>
-      text().withDefault(const Constant('USD'))();
-  TextColumn get themeMode =>
-      text().withDefault(const Constant('system'))();
+  TextColumn get currency => text().withDefault(const Constant('USD'))();
+  TextColumn get themeMode => text().withDefault(const Constant('system'))();
   BoolColumn get notificationsEnabled =>
       boolean().withDefault(const Constant(true))();
   BoolColumn get dailyReminderEnabled =>
       boolean().withDefault(const Constant(false))();
   TextColumn get dailyReminderTime =>
       text().withDefault(const Constant('09:00'))();
-  IntColumn get firstDayOfWeek =>
-      integer().withDefault(const Constant(1))();
+  IntColumn get firstDayOfWeek => integer().withDefault(const Constant(1))();
   BoolColumn get onboardingCompleted =>
       boolean().withDefault(const Constant(false))();
   DateTimeColumn get updatedAt => dateTime()();

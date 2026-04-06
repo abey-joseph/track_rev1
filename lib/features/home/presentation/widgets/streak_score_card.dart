@@ -17,8 +17,7 @@ class StreakScoreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final progress =
-        habitsTotal > 0 ? habitsCompleted / habitsTotal : 0.0;
+    final progress = habitsTotal > 0 ? habitsCompleted / habitsTotal : 0.0;
 
     return Card(
       elevation: 0,
@@ -79,8 +78,9 @@ class StreakScoreCard extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: value,
                           minHeight: 8,
-                          backgroundColor:
-                              colorScheme.primary.withValues(alpha: 0.15),
+                          backgroundColor: colorScheme.primary.withValues(
+                            alpha: 0.15,
+                          ),
                           color: colorScheme.primary,
                         ),
                       );

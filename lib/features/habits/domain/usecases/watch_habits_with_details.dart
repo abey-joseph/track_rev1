@@ -16,6 +16,5 @@ class WatchHabitsWithDetails
   @override
   Stream<Either<Failure, List<HabitWithDetails>>> call(
     GetHabitsParams params,
-  ) =>
-      _repository.watchHabitsWithDetails(params.userId);
+  ) => _repository.watchHabitsWithDetails(params.userId);
 }

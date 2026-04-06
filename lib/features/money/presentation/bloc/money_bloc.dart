@@ -47,18 +47,19 @@ class MoneyBloc extends Bloc<MoneyEvent, MoneyState> {
           toDate: toDate,
         ),
       ),
-      onData: (result) => result.fold(
-        (failure) => MoneyState.error(failure: failure),
-        (transactions) {
-          // Compute summary from the transactions inline to avoid
-          // an extra async call inside onData.
-          final summary = _computeSummary(transactions);
-          return MoneyState.loaded(
-            transactions: transactions,
-            summary: summary,
-          );
-        },
-      ),
+      onData:
+          (result) => result.fold(
+            (failure) => MoneyState.error(failure: failure),
+            (transactions) {
+              // Compute summary from the transactions inline to avoid
+              // an extra async call inside onData.
+              final summary = _computeSummary(transactions);
+              return MoneyState.loaded(
+                transactions: transactions,
+                summary: summary,
+              );
+            },
+          ),
     );
   }
 
@@ -87,18 +88,20 @@ class MoneyBloc extends Bloc<MoneyEvent, MoneyState> {
       }
     }
 
-    final sorted = categoryTotals.entries.toList()
-      ..sort((a, b) => b.value.amount.compareTo(a.value.amount));
+    final sorted =
+        categoryTotals.entries.toList()
+          ..sort((a, b) => b.value.amount.compareTo(a.value.amount));
 
-    final topCategories = sorted.take(5).map((e) {
-      return CategorySpending(
-        categoryId: e.key,
-        name: e.value.name,
-        iconName: e.value.iconName,
-        colorHex: e.value.colorHex,
-        amountCents: e.value.amount,
-      );
-    }).toList();
+    final topCategories =
+        sorted.take(5).map((e) {
+          return CategorySpending(
+            categoryId: e.key,
+            name: e.value.name,
+            iconName: e.value.iconName,
+            colorHex: e.value.colorHex,
+            amountCents: e.value.amount,
+          );
+        }).toList();
 
     return MoneySummary(
       totalIncomeCents: totalIncome,

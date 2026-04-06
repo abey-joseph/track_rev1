@@ -14,8 +14,7 @@ class Categories extends Table {
   TextColumn get transactionType => text()();
   TextColumn get iconName => text()();
   TextColumn get colorHex => text()();
-  BoolColumn get isDefault =>
-      boolean().withDefault(const Constant(false))();
+  BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
 }

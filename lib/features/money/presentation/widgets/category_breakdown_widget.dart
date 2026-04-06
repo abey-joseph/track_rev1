@@ -38,10 +38,12 @@ class CategoryBreakdownWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            ...categories.map((cat) => _CategoryBar(
-                  category: cat,
-                  maxAmount: totalExpenseCents,
-                )),
+            ...categories.map(
+              (cat) => _CategoryBar(
+                category: cat,
+                maxAmount: totalExpenseCents,
+              ),
+            ),
           ],
         ),
       ),

@@ -19,7 +19,7 @@ class MoneyRepositoryImpl implements MoneyRepository {
 
   @override
   Stream<Either<Failure, List<TransactionWithDetails>>>
-      watchTransactionsWithDetails(
+  watchTransactionsWithDetails(
     String userId, {
     String? fromDate,
     String? toDate,
@@ -27,22 +27,22 @@ class MoneyRepositoryImpl implements MoneyRepository {
     return _localDataSource
         .watchTransactions(userId, fromDate: fromDate, toDate: toDate)
         .asyncMap((transactions) async {
-      try {
-        final results = await Future.wait(
-          transactions.map((t) => _enrichTransaction(t.toEntity())),
-        );
-        return Right<Failure, List<TransactionWithDetails>>(results);
-      } on CacheException catch (e) {
-        return Left<Failure, List<TransactionWithDetails>>(
-          Failure.cache(message: e.message),
-        );
-      }
-    });
+          try {
+            final results = await Future.wait(
+              transactions.map((t) => _enrichTransaction(t.toEntity())),
+            );
+            return Right<Failure, List<TransactionWithDetails>>(results);
+          } on CacheException catch (e) {
+            return Left<Failure, List<TransactionWithDetails>>(
+              Failure.cache(message: e.message),
+            );
+          }
+        });
   }
 
   @override
   Future<Either<Failure, List<TransactionWithDetails>>>
-      getTransactionsWithDetails(
+  getTransactionsWithDetails(
     String userId, {
     String? fromDate,
     String? toDate,
@@ -112,29 +112,34 @@ class MoneyRepositoryImpl implements MoneyRepository {
       }
 
       // Sort by amount descending, take top 5
-      final sortedCategoryIds = categoryTotals.keys.toList()
-        ..sort((a, b) => categoryTotals[b]!.compareTo(categoryTotals[a]!));
+      final sortedCategoryIds =
+          categoryTotals.keys.toList()
+            ..sort((a, b) => categoryTotals[b]!.compareTo(categoryTotals[a]!));
       final topIds = sortedCategoryIds.take(5);
 
       final topCategories = <CategorySpending>[];
       for (final catId in topIds) {
         final cat = await _localDataSource.getCategoryById(catId);
         if (cat != null) {
-          topCategories.add(CategorySpending(
-            categoryId: catId,
-            name: cat.name,
-            iconName: cat.iconName,
-            colorHex: cat.colorHex,
-            amountCents: categoryTotals[catId]!,
-          ));
+          topCategories.add(
+            CategorySpending(
+              categoryId: catId,
+              name: cat.name,
+              iconName: cat.iconName,
+              colorHex: cat.colorHex,
+              amountCents: categoryTotals[catId]!,
+            ),
+          );
         }
       }
 
-      return Right(MoneySummary(
-        totalIncomeCents: totalIncome,
-        totalExpenseCents: totalExpense,
-        topCategories: topCategories,
-      ));
+      return Right(
+        MoneySummary(
+          totalIncomeCents: totalIncome,
+          totalExpenseCents: totalExpense,
+          topCategories: topCategories,
+        ),
+      );
     } on CacheException catch (e) {
       return Left(Failure.cache(message: e.message));
     }
@@ -145,9 +150,10 @@ class MoneyRepositoryImpl implements MoneyRepository {
     TransactionEntity transaction,
   ) async {
     try {
-      final balanceDelta = transaction.type == TransactionType.income
-          ? transaction.amountCents
-          : -transaction.amountCents;
+      final balanceDelta =
+          transaction.type == TransactionType.income
+              ? transaction.amountCents
+              : -transaction.amountCents;
 
       final id = await _localDataSource.insertTransaction(
         transaction.toCompanion(),

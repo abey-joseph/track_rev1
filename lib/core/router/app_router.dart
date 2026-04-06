@@ -37,6 +37,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: HabitStatsRoute.page, path: '/habit/:id/stats'),
 
     // Money detail routes
+    AutoRoute(page: AllTransactionsRoute.page),
     AutoRoute(page: TransactionDetailRoute.page, path: '/transaction/:id'),
     CustomRoute<TransactionCreateEditRoute>(
       page: TransactionCreateEditRoute.page,

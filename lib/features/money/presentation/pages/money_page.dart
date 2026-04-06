@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:track/core/constants/animation_constants.dart';
 import 'package:track/core/error/failures.dart';
 import 'package:track/core/extensions/context_extensions.dart';
+import 'package:track/core/router/app_router.gr.dart';
 import 'package:track/features/money/domain/entities/money_summary.dart';
 import 'package:track/features/money/domain/entities/transaction_with_details.dart';
 import 'package:track/features/money/presentation/bloc/money_bloc.dart';
@@ -39,55 +40,58 @@ class _MoneyView extends StatelessWidget {
         title: const Text('Money'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.account_balance_rounded),
-            onPressed: () {},
+            icon: const Icon(Icons.receipt_long_rounded),
+            tooltip: 'All Transactions',
+            onPressed: () => context.router.push(const AllTransactionsRoute()),
           ),
         ],
       ),
       body: BlocBuilder<MoneyBloc, MoneyState>(
         buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
-        builder: (context, state) => switch (state) {
-          MoneyInitial() || MoneyLoading() => const Center(
-              child: CircularProgressIndicator(),
-            ),
-          MoneyLoaded() => _MoneyContent(
-              colorScheme: colorScheme,
-              textTheme: textTheme,
-            ),
-          MoneyError(:final failure) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: colorScheme.error.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    switch (failure) {
-                      ServerFailure(:final message) => message,
-                      CacheFailure(:final message) => message,
-                      NetworkFailure(:final message) => message,
-                      AuthFailure(:final message) => message,
-                      UnexpectedFailure(:final message) => message,
-                    },
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () => context.read<MoneyBloc>().add(
-                          const MoneyEvent.refreshRequested(),
-                        ),
-                    child: const Text('Retry'),
-                  ),
-                ],
+        builder:
+            (context, state) => switch (state) {
+              MoneyInitial() || MoneyLoading() => const Center(
+                child: CircularProgressIndicator(),
               ),
-            ),
-        },
+              MoneyLoaded() => _MoneyContent(
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+              MoneyError(:final failure) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: colorScheme.error.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      switch (failure) {
+                        ServerFailure(:final message) => message,
+                        CacheFailure(:final message) => message,
+                        NetworkFailure(:final message) => message,
+                        AuthFailure(:final message) => message,
+                        UnexpectedFailure(:final message) => message,
+                      },
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed:
+                          () => context.read<MoneyBloc>().add(
+                            const MoneyEvent.refreshRequested(),
+                          ),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            },
       ),
     );
   }
@@ -123,8 +127,7 @@ class _MoneyContent extends StatelessWidget {
           return _buildEmptyState(colorScheme, textTheme);
         }
 
-        final groups =
-            TransactionDateGroup.groupByDate(state.transactions);
+        final groups = TransactionDateGroup.groupByDate(state.transactions);
         final dateKeys = groups.keys.toList();
 
         return CustomScrollView(
@@ -185,8 +188,7 @@ class _MoneyContent extends StatelessWidget {
     );
   }
 
-  static Widget _buildEmptyState(
-      ColorScheme colorScheme, TextTheme textTheme) {
+  static Widget _buildEmptyState(ColorScheme colorScheme, TextTheme textTheme) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -234,11 +236,15 @@ class _SummarySelector extends StatelessWidget {
 class _CategoryBreakdownSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<MoneyBloc, MoneyState,
-        (List<CategorySpending>, int)?>(
-      selector: (state) => state is MoneyLoaded
-          ? (state.summary.topCategories, state.summary.totalExpenseCents)
-          : null,
+    return BlocSelector<MoneyBloc, MoneyState, (List<CategorySpending>, int)?>(
+      selector:
+          (state) =>
+              state is MoneyLoaded
+                  ? (
+                    state.summary.topCategories,
+                    state.summary.totalExpenseCents,
+                  )
+                  : null,
       builder: (context, data) {
         if (data == null || data.$1.isEmpty) return const SizedBox.shrink();
         return CategoryBreakdownWidget(

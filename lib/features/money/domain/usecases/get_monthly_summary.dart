@@ -15,8 +15,7 @@ class GetMonthlySummary implements UseCase<MoneySummary, MonthlySummaryParams> {
   @override
   Future<Either<Failure, MoneySummary>> call(
     MonthlySummaryParams params,
-  ) =>
-      _repository.getMonthlySummary(params.userId, params.year, params.month);
+  ) => _repository.getMonthlySummary(params.userId, params.year, params.month);
 }
 
 class MonthlySummaryParams extends Equatable {

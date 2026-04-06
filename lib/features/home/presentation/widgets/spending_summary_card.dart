@@ -90,24 +90,25 @@ class SpendingSummaryCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 6,
-              children: topCategories.map((category) {
-                return Chip(
-                  avatar: Icon(
-                    category.icon,
-                    size: 16,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  label: Text(
-                    '\$${category.amount.toStringAsFixed(0)}',
-                    style: textTheme.labelSmall,
-                  ),
-                  labelPadding: const EdgeInsets.only(left: 2),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  side: BorderSide.none,
-                  backgroundColor: colorScheme.surfaceContainerHigh,
-                );
-              }).toList(),
+              children:
+                  topCategories.map((category) {
+                    return Chip(
+                      avatar: Icon(
+                        category.icon,
+                        size: 16,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      label: Text(
+                        '\$${category.amount.toStringAsFixed(0)}',
+                        style: textTheme.labelSmall,
+                      ),
+                      labelPadding: const EdgeInsets.only(left: 2),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      side: BorderSide.none,
+                      backgroundColor: colorScheme.surfaceContainerHigh,
+                    );
+                  }).toList(),
             ),
           ],
         ),

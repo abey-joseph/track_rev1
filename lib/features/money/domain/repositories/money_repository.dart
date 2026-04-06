@@ -8,14 +8,14 @@ import 'package:track/features/money/domain/entities/transaction_with_details.da
 
 abstract class MoneyRepository {
   Stream<Either<Failure, List<TransactionWithDetails>>>
-      watchTransactionsWithDetails(
+  watchTransactionsWithDetails(
     String userId, {
     String? fromDate,
     String? toDate,
   });
 
   Future<Either<Failure, List<TransactionWithDetails>>>
-      getTransactionsWithDetails(
+  getTransactionsWithDetails(
     String userId, {
     String? fromDate,
     String? toDate,

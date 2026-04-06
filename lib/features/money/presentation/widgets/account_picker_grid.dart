@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/features/money/domain/entities/account_entity.dart';
-import 'package:track/features/money/presentation/utils/currency_formatter.dart';
 import 'package:track/features/money/presentation/utils/money_icon_resolver.dart';
 
 class AccountPickerGrid extends StatelessWidget {
@@ -21,71 +20,68 @@ class AccountPickerGrid extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final textTheme = context.textTheme;
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: accounts.map((acct) {
-        final isSelected = acct.id == selectedId;
-        final color = _parseColor(acct.colorHex);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        spacing: 8,
+        children:
+            accounts.map((acct) {
+              final isSelected = acct.id == selectedId;
+              final color = _parseColor(acct.colorHex);
 
-        return GestureDetector(
-          onTap: () => onSelected(acct.id),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? colorScheme.primaryContainer
-                  : colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(14),
-              border: isSelected
-                  ? Border.all(color: colorScheme.primary, width: 1.5)
-                  : null,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
+              return GestureDetector(
+                onTap: () => onSelected(acct.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isSelected
-                        ? color
-                        : color.withValues(alpha: 0.15),
+                    color:
+                        isSelected
+                            ? colorScheme.primaryContainer
+                            : colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(14),
+                    border:
+                        isSelected
+                            ? Border.all(color: colorScheme.primary, width: 1.5)
+                            : null,
                   ),
-                  child: Icon(
-                    resolveMoneyIcon(acct.iconName),
-                    size: 16,
-                    color: isSelected ? Colors.white : color,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color:
+                              isSelected
+                                  ? color
+                                  : color.withValues(alpha: 0.15),
+                        ),
+                        child: Icon(
+                          resolveMoneyIcon(acct.iconName),
+                          size: 13,
+                          color: isSelected ? Colors.white : color,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        acct.name,
+                        style: textTheme.labelLarge?.copyWith(
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      acct.name,
-                      style: textTheme.labelLarge?.copyWith(
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w400,
-                      ),
-                    ),
-                    Text(
-                      formatCurrency(acct.balanceCents),
-                      style: textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
+              );
+            }).toList(),
+      ),
     );
   }
 }

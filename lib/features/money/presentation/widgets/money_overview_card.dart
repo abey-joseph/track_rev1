@@ -50,9 +50,10 @@ class MoneyOverviewCard extends StatelessWidget {
                         ? Icons.trending_up_rounded
                         : Icons.trending_down_rounded,
                     size: 20,
-                    color: isPositive
-                        ? const Color(0xFF4CAF50)
-                        : const Color(0xFFF44336),
+                    color:
+                        isPositive
+                            ? const Color(0xFF4CAF50)
+                            : const Color(0xFFF44336),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -69,9 +70,10 @@ class MoneyOverviewCard extends StatelessWidget {
                       formatCurrency(netCents),
                       style: textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: isPositive
-                            ? const Color(0xFF4CAF50)
-                            : const Color(0xFFF44336),
+                        color:
+                            isPositive
+                                ? const Color(0xFF4CAF50)
+                                : const Color(0xFFF44336),
                       ),
                     ),
                   ],

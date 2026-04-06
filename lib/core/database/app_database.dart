@@ -48,89 +48,141 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-          await _seedDefaultCategories();
-        },
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.addColumn(habits, habits.targetType);
-          }
-          if (from < 3) {
-            await _seedDefaultCategories();
-          }
-        },
-      );
+    onCreate: (m) async {
+      await m.createAll();
+      await _seedDefaultCategories();
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(habits, habits.targetType);
+      }
+      if (from < 3) {
+        await _seedDefaultCategories();
+      }
+    },
+  );
 
   Future<void> _seedDefaultCategories() async {
     final now = DateTime.now();
     final defaults = <CategoriesCompanion>[
       // Expense categories
       CategoriesCompanion.insert(
-        name: 'Food & Dining', transactionType: 'expense',
-        iconName: 'restaurant', colorHex: '#FF9800',
-        isDefault: const Value(true), sortOrder: const Value(0), createdAt: now,
+        name: 'Food & Dining',
+        transactionType: 'expense',
+        iconName: 'restaurant',
+        colorHex: '#FF9800',
+        isDefault: const Value(true),
+        sortOrder: const Value(0),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Transport', transactionType: 'expense',
-        iconName: 'directions_car', colorHex: '#2196F3',
-        isDefault: const Value(true), sortOrder: const Value(1), createdAt: now,
+        name: 'Transport',
+        transactionType: 'expense',
+        iconName: 'directions_car',
+        colorHex: '#2196F3',
+        isDefault: const Value(true),
+        sortOrder: const Value(1),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Entertainment', transactionType: 'expense',
-        iconName: 'movie', colorHex: '#E91E63',
-        isDefault: const Value(true), sortOrder: const Value(2), createdAt: now,
+        name: 'Entertainment',
+        transactionType: 'expense',
+        iconName: 'movie',
+        colorHex: '#E91E63',
+        isDefault: const Value(true),
+        sortOrder: const Value(2),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Shopping', transactionType: 'expense',
-        iconName: 'shopping_bag', colorHex: '#9C27B0',
-        isDefault: const Value(true), sortOrder: const Value(3), createdAt: now,
+        name: 'Shopping',
+        transactionType: 'expense',
+        iconName: 'shopping_bag',
+        colorHex: '#9C27B0',
+        isDefault: const Value(true),
+        sortOrder: const Value(3),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Bills & Utilities', transactionType: 'expense',
-        iconName: 'receipt_long', colorHex: '#607D8B',
-        isDefault: const Value(true), sortOrder: const Value(4), createdAt: now,
+        name: 'Bills & Utilities',
+        transactionType: 'expense',
+        iconName: 'receipt_long',
+        colorHex: '#607D8B',
+        isDefault: const Value(true),
+        sortOrder: const Value(4),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Health', transactionType: 'expense',
-        iconName: 'favorite', colorHex: '#F44336',
-        isDefault: const Value(true), sortOrder: const Value(5), createdAt: now,
+        name: 'Health',
+        transactionType: 'expense',
+        iconName: 'favorite',
+        colorHex: '#F44336',
+        isDefault: const Value(true),
+        sortOrder: const Value(5),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Education', transactionType: 'expense',
-        iconName: 'school', colorHex: '#3F51B5',
-        isDefault: const Value(true), sortOrder: const Value(6), createdAt: now,
+        name: 'Education',
+        transactionType: 'expense',
+        iconName: 'school',
+        colorHex: '#3F51B5',
+        isDefault: const Value(true),
+        sortOrder: const Value(6),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Other Expense', transactionType: 'expense',
-        iconName: 'more_horiz', colorHex: '#795548',
-        isDefault: const Value(true), sortOrder: const Value(7), createdAt: now,
+        name: 'Other Expense',
+        transactionType: 'expense',
+        iconName: 'more_horiz',
+        colorHex: '#795548',
+        isDefault: const Value(true),
+        sortOrder: const Value(7),
+        createdAt: now,
       ),
       // Income categories
       CategoriesCompanion.insert(
-        name: 'Salary', transactionType: 'income',
-        iconName: 'payments', colorHex: '#4CAF50',
-        isDefault: const Value(true), sortOrder: const Value(0), createdAt: now,
+        name: 'Salary',
+        transactionType: 'income',
+        iconName: 'payments',
+        colorHex: '#4CAF50',
+        isDefault: const Value(true),
+        sortOrder: const Value(0),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Freelance', transactionType: 'income',
-        iconName: 'work', colorHex: '#00BCD4',
-        isDefault: const Value(true), sortOrder: const Value(1), createdAt: now,
+        name: 'Freelance',
+        transactionType: 'income',
+        iconName: 'work',
+        colorHex: '#00BCD4',
+        isDefault: const Value(true),
+        sortOrder: const Value(1),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Investment', transactionType: 'income',
-        iconName: 'trending_up', colorHex: '#FF5722',
-        isDefault: const Value(true), sortOrder: const Value(2), createdAt: now,
+        name: 'Investment',
+        transactionType: 'income',
+        iconName: 'trending_up',
+        colorHex: '#FF5722',
+        isDefault: const Value(true),
+        sortOrder: const Value(2),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Gift', transactionType: 'income',
-        iconName: 'card_giftcard', colorHex: '#FFC107',
-        isDefault: const Value(true), sortOrder: const Value(3), createdAt: now,
+        name: 'Gift',
+        transactionType: 'income',
+        iconName: 'card_giftcard',
+        colorHex: '#FFC107',
+        isDefault: const Value(true),
+        sortOrder: const Value(3),
+        createdAt: now,
       ),
       CategoriesCompanion.insert(
-        name: 'Other Income', transactionType: 'income',
-        iconName: 'more_horiz', colorHex: '#795548',
-        isDefault: const Value(true), sortOrder: const Value(4), createdAt: now,
+        name: 'Other Income',
+        transactionType: 'income',
+        iconName: 'more_horiz',
+        colorHex: '#795548',
+        isDefault: const Value(true),
+        sortOrder: const Value(4),
+        createdAt: now,
       ),
     ];
 

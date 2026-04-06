@@ -27,8 +27,10 @@ class TransactionCreateEditPage extends StatelessWidget {
     final userId = authState is Authenticated ? authState.user.uid : '';
 
     return BlocProvider(
-      create: (_) => getIt<TransactionFormBloc>()
-        ..add(TransactionFormEvent.initialized(userId: userId)),
+      create:
+          (_) =>
+              getIt<TransactionFormBloc>()
+                ..add(TransactionFormEvent.initialized(userId: userId)),
       child: _TransactionFormView(userId: userId),
     );
   }
@@ -44,9 +46,10 @@ class _TransactionFormView extends StatelessWidget {
     final colorScheme = context.colorScheme;
 
     return BlocListener<TransactionFormBloc, TransactionFormState>(
-      listenWhen: (prev, curr) =>
-          prev.isSuccess != curr.isSuccess ||
-          prev.errorMessage != curr.errorMessage,
+      listenWhen:
+          (prev, curr) =>
+              prev.isSuccess != curr.isSuccess ||
+              prev.errorMessage != curr.errorMessage,
       listener: (context, state) {
         if (state.isSuccess) {
           HapticFeedback.mediumImpact();
@@ -62,30 +65,36 @@ class _TransactionFormView extends StatelessWidget {
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: BlocSelector<TransactionFormBloc, TransactionFormState,
-                  (bool, bool)>(
-                selector: (state) => (
-                  state.isSubmitting,
-                  state.amount.isNotEmpty && state.title.isNotEmpty,
-                ),
+              child: BlocSelector<
+                TransactionFormBloc,
+                TransactionFormState,
+                (bool, bool)
+              >(
+                selector:
+                    (state) => (
+                      state.isSubmitting,
+                      state.amount.isNotEmpty && state.title.isNotEmpty,
+                    ),
                 builder: (context, data) {
                   final (isSubmitting, canSave) = data;
                   return FilledButton(
-                    onPressed: canSave && !isSubmitting
-                        ? () => context.read<TransactionFormBloc>().add(
+                    onPressed:
+                        canSave && !isSubmitting
+                            ? () => context.read<TransactionFormBloc>().add(
                               TransactionFormEvent.submitted(userId: userId),
                             )
-                        : null,
-                    child: isSubmitting
-                        ? SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: colorScheme.onPrimary,
-                            ),
-                          )
-                        : const Text('Save'),
+                            : null,
+                    child:
+                        isSubmitting
+                            ? SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: colorScheme.onPrimary,
+                              ),
+                            )
+                            : const Text('Save'),
                   );
                 },
               ),
@@ -93,22 +102,22 @@ class _TransactionFormView extends StatelessWidget {
           ],
         ),
         body: const SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(20, 8, 20, 40),
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _TypeToggleSection(),
-              SizedBox(height: 24),
+              SizedBox(height: 12),
               _AmountField(),
-              SizedBox(height: 20),
+              SizedBox(height: 10),
               _TitleField(),
-              SizedBox(height: 28),
+              SizedBox(height: 16),
               _CategorySection(),
-              SizedBox(height: 28),
+              SizedBox(height: 16),
               _AccountSection(),
-              SizedBox(height: 28),
+              SizedBox(height: 16),
               _DateSection(),
-              SizedBox(height: 28),
+              SizedBox(height: 16),
               _NoteField(),
             ],
           ),
@@ -123,14 +132,18 @@ class _TypeToggleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<TransactionFormBloc, TransactionFormState,
-        TransactionType>(
+    return BlocSelector<
+      TransactionFormBloc,
+      TransactionFormState,
+      TransactionType
+    >(
       selector: (state) => state.type,
       builder: (context, type) {
         return Center(
           child: TransactionTypeToggle(
             selected: type,
-            onChanged: (t) => context.read<TransactionFormBloc>().add(
+            onChanged:
+                (t) => context.read<TransactionFormBloc>().add(
                   TransactionFormEvent.typeChanged(type: t),
                 ),
           ),
@@ -148,8 +161,11 @@ class _AmountField extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final textTheme = context.textTheme;
 
-    return BlocSelector<TransactionFormBloc, TransactionFormState,
-        TransactionType>(
+    return BlocSelector<
+      TransactionFormBloc,
+      TransactionFormState,
+      TransactionType
+    >(
       selector: (state) => state.type,
       builder: (context, type) {
         final isIncome = type == TransactionType.income;
@@ -157,70 +173,60 @@ class _AmountField extends StatelessWidget {
             isIncome ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
 
         return Container(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           decoration: BoxDecoration(
             color: accentColor.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: accentColor.withValues(alpha: 0.15)),
           ),
-          child: Column(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                isIncome ? 'Income' : 'Expense',
-                style: textTheme.labelLarge?.copyWith(
-                  color: accentColor,
-                  fontWeight: FontWeight.w600,
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  '\$',
+                  style: textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w300,
+                    color: colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      '\$',
-                      style: textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w300,
-                        color: colorScheme.onSurface.withValues(alpha: 0.4),
-                      ),
+              const SizedBox(width: 4),
+              IntrinsicWidth(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 80),
+                  child: TextFormField(
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  IntrinsicWidth(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 80),
-                      child: TextFormField(
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}')),
-                        ],
-                        style: textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: accentColor,
-                        ),
-                        textAlign: TextAlign.center,
-                        decoration: InputDecoration(
-                          hintText: '0.00',
-                          hintStyle: textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: accentColor.withValues(alpha: 0.25),
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          isDense: true,
-                        ),
-                        onChanged: (v) =>
-                            context.read<TransactionFormBloc>().add(
-                                  TransactionFormEvent.amountChanged(amount: v),
-                                ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}'),
                       ),
+                    ],
+                    style: textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: accentColor,
                     ),
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      hintText: '0.00',
+                      hintStyle: textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: accentColor.withValues(alpha: 0.25),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
+                    ),
+                    onChanged:
+                        (v) => context.read<TransactionFormBloc>().add(
+                          TransactionFormEvent.amountChanged(amount: v),
+                        ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -256,7 +262,8 @@ class _TitleField extends StatelessWidget {
         ),
         counterText: '',
       ),
-      onChanged: (v) => context.read<TransactionFormBloc>().add(
+      onChanged:
+          (v) => context.read<TransactionFormBloc>().add(
             TransactionFormEvent.titleChanged(title: v),
           ),
     );
@@ -271,51 +278,36 @@ class _CategorySection extends StatelessWidget {
     final textTheme = context.textTheme;
     final colorScheme = context.colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.category_rounded,
-                size: 18, color: colorScheme.primary),
-            const SizedBox(width: 8),
-            Text(
-              'Category',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        BlocSelector<TransactionFormBloc, TransactionFormState,
-            (List<CategoryEntity>, int?, TransactionType)>(
-          selector: (state) => (
+    return BlocSelector<
+      TransactionFormBloc,
+      TransactionFormState,
+      (List<CategoryEntity>, int?, TransactionType)
+    >(
+      selector:
+          (state) => (
             TransactionFormBloc.filteredCategories(state),
             state.categoryId,
             state.type,
           ),
-          builder: (context, data) {
-            final (categories, selectedId, _) = data;
-            if (categories.isEmpty) {
-              return Text(
-                'No categories available',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-              );
-            }
-            return CategoryPickerGrid(
-              categories: categories,
-              selectedId: selectedId,
-              onSelected: (id) =>
-                  context.read<TransactionFormBloc>().add(
-                        TransactionFormEvent.categorySelected(categoryId: id),
-                      ),
-            );
-          },
-        ),
-      ],
+      builder: (context, data) {
+        final (categories, selectedId, _) = data;
+        if (categories.isEmpty) {
+          return Text(
+            'No categories available',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          );
+        }
+        return CategoryPickerGrid(
+          categories: categories,
+          selectedId: selectedId,
+          onSelected:
+              (id) => context.read<TransactionFormBloc>().add(
+                TransactionFormEvent.categorySelected(categoryId: id),
+              ),
+        );
+      },
     );
   }
 }
@@ -328,48 +320,32 @@ class _AccountSection extends StatelessWidget {
     final textTheme = context.textTheme;
     final colorScheme = context.colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.account_balance_wallet_rounded,
-                size: 18, color: colorScheme.primary),
-            const SizedBox(width: 8),
-            Text(
-              'Account',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+    return BlocSelector<
+      TransactionFormBloc,
+      TransactionFormState,
+      (List<dynamic>, int?)
+    >(
+      selector: (state) => (state.availableAccounts, state.accountId),
+      builder: (context, data) {
+        final accounts = data.$1;
+        final selectedId = data.$2;
+        if (accounts.isEmpty) {
+          return Text(
+            'Loading accounts...',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        BlocSelector<TransactionFormBloc, TransactionFormState,
-            (List<dynamic>, int?)>(
-          selector: (state) => (state.availableAccounts, state.accountId),
-          builder: (context, data) {
-            final accounts = data.$1;
-            final selectedId = data.$2;
-            if (accounts.isEmpty) {
-              return Text(
-                'Loading accounts...',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-              );
-            }
-            return AccountPickerGrid(
-              accounts: accounts.cast(),
-              selectedId: selectedId,
-              onSelected: (id) =>
-                  context.read<TransactionFormBloc>().add(
-                        TransactionFormEvent.accountSelected(accountId: id),
-                      ),
-            );
-          },
-        ),
-      ],
+          );
+        }
+        return AccountPickerGrid(
+          accounts: accounts.cast(),
+          selectedId: selectedId,
+          onSelected:
+              (id) => context.read<TransactionFormBloc>().add(
+                TransactionFormEvent.accountSelected(accountId: id),
+              ),
+        );
+      },
     );
   }
 }
@@ -382,83 +358,76 @@ class _DateSection extends StatelessWidget {
     final textTheme = context.textTheme;
     final colorScheme = context.colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.calendar_today_rounded,
-                size: 18, color: colorScheme.primary),
-            const SizedBox(width: 8),
-            Text(
-              'Date',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        BlocSelector<TransactionFormBloc, TransactionFormState, DateTime?>(
-          selector: (state) => state.date,
-          builder: (context, date) {
-            final displayDate = date ?? DateTime.now();
-            final formatted =
-                '${_months[displayDate.month - 1]} ${displayDate.day}, ${displayDate.year}';
+    return BlocSelector<TransactionFormBloc, TransactionFormState, DateTime?>(
+      selector: (state) => state.date,
+      builder: (context, date) {
+        final displayDate = date ?? DateTime.now();
+        final formatted =
+            '${_months[displayDate.month - 1]} ${displayDate.day}, ${displayDate.year}';
 
-            return GestureDetector(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: displayDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now().add(const Duration(days: 1)),
-                );
-                if (picked != null && context.mounted) {
-                  context.read<TransactionFormBloc>().add(
-                        TransactionFormEvent.dateChanged(date: picked),
-                      );
-                }
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_rounded,
-                      size: 22,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      formatted,
-                      style: textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: colorScheme.onSurface.withValues(alpha: 0.3),
-                    ),
-                  ],
-                ),
-              ),
+        return GestureDetector(
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: displayDate,
+              firstDate: DateTime(2020),
+              lastDate: DateTime.now().add(const Duration(days: 1)),
             );
+            if (picked != null && context.mounted) {
+              context.read<TransactionFormBloc>().add(
+                TransactionFormEvent.dateChanged(date: picked),
+              );
+            }
           },
-        ),
-      ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.access_time_rounded,
+                  size: 22,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  formatted,
+                  style: textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 }
 
@@ -470,13 +439,13 @@ class _NoteField extends StatelessWidget {
     final colorScheme = context.colorScheme;
 
     return TextFormField(
-      maxLines: 3,
+      maxLines: 2,
       textCapitalization: TextCapitalization.sentences,
       decoration: InputDecoration(
         labelText: 'Note (optional)',
         hintText: 'Add a note...',
         prefixIcon: const Padding(
-          padding: EdgeInsets.only(bottom: 48),
+          padding: EdgeInsets.only(bottom: 24),
           child: Icon(Icons.notes_rounded),
         ),
         filled: true,
@@ -490,7 +459,8 @@ class _NoteField extends StatelessWidget {
           borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
         ),
       ),
-      onChanged: (v) => context.read<TransactionFormBloc>().add(
+      onChanged:
+          (v) => context.read<TransactionFormBloc>().add(
             TransactionFormEvent.noteChanged(note: v),
           ),
     );

@@ -16,12 +16,11 @@ class GetTransactionsWithDetails
   @override
   Future<Either<Failure, List<TransactionWithDetails>>> call(
     MoneyParams params,
-  ) =>
-      _repository.getTransactionsWithDetails(
-        params.userId,
-        fromDate: params.fromDate,
-        toDate: params.toDate,
-      );
+  ) => _repository.getTransactionsWithDetails(
+    params.userId,
+    fromDate: params.fromDate,
+    toDate: params.toDate,
+  );
 }
 
 class MoneyParams extends Equatable {

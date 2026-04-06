@@ -20,63 +20,71 @@ class CategoryPickerGrid extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final textTheme = context.textTheme;
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: categories.map((cat) {
-        final isSelected = cat.id == selectedId;
-        final color = _parseColor(cat.colorHex);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        spacing: 8,
+        children:
+            categories.map((cat) {
+              final isSelected = cat.id == selectedId;
+              final color = _parseColor(cat.colorHex);
 
-        return GestureDetector(
-          onTap: () => onSelected(cat.id),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            width: 80,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? colorScheme.primaryContainer
-                  : colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(14),
-              border: isSelected
-                  ? Border.all(color: colorScheme.primary, width: 1.5)
-                  : null,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
+              return GestureDetector(
+                onTap: () => onSelected(cat.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isSelected
-                        ? color
-                        : color.withValues(alpha: 0.15),
+                    color:
+                        isSelected
+                            ? colorScheme.primaryContainer
+                            : colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(20),
+                    border:
+                        isSelected
+                            ? Border.all(color: colorScheme.primary, width: 1.5)
+                            : null,
                   ),
-                  child: Icon(
-                    resolveMoneyIcon(cat.iconName),
-                    size: 18,
-                    color: isSelected ? Colors.white : color,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color:
+                              isSelected
+                                  ? color
+                                  : color.withValues(alpha: 0.15),
+                        ),
+                        child: Icon(
+                          resolveMoneyIcon(cat.iconName),
+                          size: 14,
+                          color: isSelected ? Colors.white : color,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        cat.name,
+                        style: textTheme.labelSmall?.copyWith(
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w400,
+                          color: colorScheme.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  cat.name,
-                  style: textTheme.labelSmall?.copyWith(
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: colorScheme.onSurface,
-                  ),
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
+              );
+            }).toList(),
+      ),
     );
   }
 }

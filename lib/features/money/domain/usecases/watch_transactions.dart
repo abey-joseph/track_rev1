@@ -8,8 +8,7 @@ import 'package:track/features/money/domain/usecases/get_transactions.dart';
 
 @lazySingleton
 class WatchTransactionsWithDetails
-    implements
-        StreamUseCase<List<TransactionWithDetails>, MoneyParams> {
+    implements StreamUseCase<List<TransactionWithDetails>, MoneyParams> {
   WatchTransactionsWithDetails(this._repository);
 
   final MoneyRepository _repository;
@@ -17,10 +16,9 @@ class WatchTransactionsWithDetails
   @override
   Stream<Either<Failure, List<TransactionWithDetails>>> call(
     MoneyParams params,
-  ) =>
-      _repository.watchTransactionsWithDetails(
-        params.userId,
-        fromDate: params.fromDate,
-        toDate: params.toDate,
-      );
+  ) => _repository.watchTransactionsWithDetails(
+    params.userId,
+    fromDate: params.fromDate,
+    toDate: params.toDate,
+  );
 }
