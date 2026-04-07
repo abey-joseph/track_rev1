@@ -14,6 +14,7 @@ class Accounts extends Table {
   TextColumn get type => text()();
   IntColumn get balance => integer().withDefault(const Constant(0))();
   TextColumn get currency => text().withDefault(const Constant('USD'))();
+  TextColumn get description => text().nullable()();
   TextColumn get iconName =>
       text().withDefault(const Constant('account_balance'))();
   TextColumn get colorHex => text().withDefault(const Constant('#2196F3'))();

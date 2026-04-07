@@ -1,12 +1,12 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:track/core/router/app_router.gr.dart';
 import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:track/features/auth/presentation/bloc/auth_state.dart';
 import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
 import 'package:track/features/habits/presentation/bloc/habits_event.dart';
-import 'package:flutter/services.dart';
 import 'package:track/features/money/presentation/bloc/money_bloc.dart';
 import 'package:track/features/money/presentation/bloc/money_event.dart';
 import 'package:track/injection.dart';

@@ -6,6 +6,7 @@ import 'package:track/features/money/data/datasources/money_local_data_source.da
 import 'package:track/features/money/data/mappers/money_mapper.dart';
 import 'package:track/features/money/domain/entities/account_entity.dart';
 import 'package:track/features/money/domain/entities/category_entity.dart';
+import 'package:track/features/money/domain/entities/currency_entity.dart';
 import 'package:track/features/money/domain/entities/money_summary.dart';
 import 'package:track/features/money/domain/entities/transaction_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_with_details.dart';
@@ -16,6 +17,8 @@ class MoneyRepositoryImpl implements MoneyRepository {
   MoneyRepositoryImpl(this._localDataSource);
 
   final MoneyLocalDataSource _localDataSource;
+
+  // ── Transactions ──────────────────────────────────────────────────────────
 
   @override
   Stream<Either<Failure, List<TransactionWithDetails>>>
@@ -111,7 +114,6 @@ class MoneyRepositoryImpl implements MoneyRepository {
         }
       }
 
-      // Sort by amount descending, take top 5
       final sortedCategoryIds =
           categoryTotals.keys.toList()
             ..sort((a, b) => categoryTotals[b]!.compareTo(categoryTotals[a]!));
@@ -165,6 +167,8 @@ class MoneyRepositoryImpl implements MoneyRepository {
     }
   }
 
+  // ── Accounts ──────────────────────────────────────────────────────────────
+
   @override
   Future<Either<Failure, List<AccountEntity>>> getAccounts(
     String userId,
@@ -180,6 +184,7 @@ class MoneyRepositoryImpl implements MoneyRepository {
 
   @override
   Stream<Either<Failure, List<AccountEntity>>> watchAccounts(String userId) {
+    _localDataSource.ensureDefaultAccounts(userId).ignore();
     return _localDataSource.watchAccounts(userId).map((accounts) {
       try {
         return Right<Failure, List<AccountEntity>>(
@@ -194,12 +199,138 @@ class MoneyRepositoryImpl implements MoneyRepository {
   }
 
   @override
+  Future<Either<Failure, int>> createAccount(AccountEntity account) async {
+    try {
+      final id = await _localDataSource.insertAccount(account.toCompanion());
+      return Right(id);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateAccount(AccountEntity account) async {
+    try {
+      await _localDataSource.updateAccount(account.toCompanion());
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteAccount(int id, String userId) async {
+    try {
+      await _localDataSource.deleteAccount(id);
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> setDefaultAccount(
+    int accountId,
+    String userId,
+  ) async {
+    try {
+      await _localDataSource.setDefaultAccount(accountId, userId);
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  // ── Categories ────────────────────────────────────────────────────────────
+
+  @override
   Future<Either<Failure, List<CategoryEntity>>> getCategories(
     String userId,
   ) async {
     try {
       final categories = await _localDataSource.getCategories(userId);
       return Right(categories.map((c) => c.toEntity()).toList());
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  // ── Currencies ────────────────────────────────────────────────────────────
+
+  @override
+  Future<Either<Failure, List<CurrencyEntity>>> getCurrencies(
+    String userId,
+  ) async {
+    try {
+      await _localDataSource.ensureDefaultCurrencies(userId);
+      final list = await _localDataSource.getCurrencies(userId);
+      return Right(list.map((c) => c.toEntity()).toList());
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Stream<Either<Failure, List<CurrencyEntity>>> watchCurrencies(
+    String userId,
+  ) {
+    _localDataSource.ensureDefaultCurrencies(userId).ignore();
+    return _localDataSource.watchCurrencies(userId).map((list) {
+      try {
+        return Right<Failure, List<CurrencyEntity>>(
+          list.map((c) => c.toEntity()).toList(),
+        );
+      } on CacheException catch (e) {
+        return Left<Failure, List<CurrencyEntity>>(
+          Failure.cache(message: e.message),
+        );
+      }
+    });
+  }
+
+  @override
+  Future<Either<Failure, int>> createCurrency(CurrencyEntity currency) async {
+    try {
+      final id = await _localDataSource.insertCurrency(
+        currency.toCompanion(),
+      );
+      return Right(id);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateCurrency(CurrencyEntity currency) async {
+    try {
+      await _localDataSource.updateCurrency(currency.toCompanion());
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteCurrency(int id, String userId) async {
+    try {
+      final currency = await _localDataSource.getCurrencyById(id);
+      if (currency == null) return const Right(null);
+
+      final inUse = await _localDataSource.isCurrencyInUse(
+        currency.code,
+        userId,
+      );
+      if (inUse) {
+        return Left(
+          Failure.cache(
+            message:
+                'Cannot delete "${currency.name}" — it is used by one or more accounts.',
+          ),
+        );
+      }
+
+      await _localDataSource.deleteCurrency(id);
+      return const Right(null);
     } on CacheException catch (e) {
       return Left(Failure.cache(message: e.message));
     }

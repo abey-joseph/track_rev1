@@ -3,6 +3,7 @@ import 'package:track/core/database/app_database.dart';
 import 'package:track/features/money/domain/entities/account_entity.dart';
 import 'package:track/features/money/domain/entities/budget_entity.dart';
 import 'package:track/features/money/domain/entities/category_entity.dart';
+import 'package:track/features/money/domain/entities/currency_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_entity.dart';
 
 // ── Account ───────────────────────────────────────────────────────────────────
@@ -22,6 +23,7 @@ extension AccountRowToEntity on Account {
     sortOrder: sortOrder,
     createdAt: createdAt,
     updatedAt: updatedAt,
+    description: description,
   );
 }
 
@@ -33,11 +35,42 @@ extension AccountEntityToCompanion on AccountEntity {
     type: Value(_accountTypeName(type)),
     balance: Value(balanceCents),
     currency: Value(currency),
+    description: Value(description),
     iconName: Value(iconName),
     colorHex: Value(colorHex),
     isDefault: Value(isDefault),
     isArchived: Value(isArchived),
     sortOrder: Value(sortOrder),
+    createdAt: Value(createdAt),
+    updatedAt: Value(updatedAt),
+  );
+}
+
+// ── Currency ──────────────────────────────────────────────────────────────────
+
+extension CurrencyRowToEntity on Currency {
+  CurrencyEntity toEntity() => CurrencyEntity(
+    id: id,
+    userId: userId,
+    name: name,
+    code: code,
+    symbol: symbol,
+    exchangeRate: exchangeRate,
+    isDefault: isDefault,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+  );
+}
+
+extension CurrencyEntityToCompanion on CurrencyEntity {
+  CurrenciesCompanion toCompanion() => CurrenciesCompanion(
+    id: id == 0 ? const Value.absent() : Value(id),
+    userId: Value(userId),
+    name: Value(name),
+    code: Value(code),
+    symbol: Value(symbol),
+    exchangeRate: Value(exchangeRate),
+    isDefault: Value(isDefault),
     createdAt: Value(createdAt),
     updatedAt: Value(updatedAt),
   );

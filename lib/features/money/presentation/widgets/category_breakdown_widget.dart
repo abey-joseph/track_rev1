@@ -6,9 +6,9 @@ import 'package:track/features/money/presentation/utils/money_icon_resolver.dart
 
 class CategoryBreakdownWidget extends StatelessWidget {
   const CategoryBreakdownWidget({
-    super.key,
     required this.categories,
     required this.totalExpenseCents,
+    super.key,
   });
 
   final List<CategorySpending> categories;

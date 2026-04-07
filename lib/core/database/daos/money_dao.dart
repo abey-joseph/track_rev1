@@ -4,7 +4,9 @@ import 'package:track/core/database/app_database.dart';
 
 part 'money_dao.g.dart';
 
-@DriftAccessor(tables: [Accounts, Categories, Transactions, Budgets])
+@DriftAccessor(
+  tables: [Accounts, Categories, Transactions, Budgets, Currencies],
+)
 class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
   MoneyDao(super.db);
 
@@ -34,6 +36,26 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
   Future<int> archiveAccount(int id) => (update(accounts)..where(
     (a) => a.id.equals(id),
   )).write(const AccountsCompanion(isArchived: Value(true)));
+
+  Future<int> deleteAccount(int id) =>
+      (delete(accounts)..where((a) => a.id.equals(id))).go();
+
+  /// Sets [accountId] as the default, clearing any other default for [userId].
+  Future<void> setDefaultAccount(int accountId, String userId) async {
+    await transaction(() async {
+      // Clear existing default
+      await (update(accounts)..where((a) => a.userId.equals(userId))).write(
+        const AccountsCompanion(isDefault: Value(false)),
+      );
+      // Set new default
+      await (update(accounts)..where((a) => a.id.equals(accountId))).write(
+        AccountsCompanion(
+          isDefault: const Value(true),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    });
+  }
 
   // ── Categories ───────────────────────────────────────────────────────────
 
@@ -204,6 +226,64 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
   Future<int> deactivateBudget(int id) => (update(budgets)..where(
     (b) => b.id.equals(id),
   )).write(const BudgetsCompanion(isActive: Value(false)));
+
+  // ── Currencies ────────────────────────────────────────────────────────────
+
+  Future<List<Currency>> getCurrencies(String userId) =>
+      (select(currencies)
+            ..where((c) => c.userId.equals(userId))
+            ..orderBy([(c) => OrderingTerm.desc(c.isDefault)]))
+          .get();
+
+  Stream<List<Currency>> watchCurrencies(String userId) =>
+      (select(currencies)
+            ..where((c) => c.userId.equals(userId))
+            ..orderBy([(c) => OrderingTerm.desc(c.isDefault)]))
+          .watch();
+
+  Future<Currency?> getCurrencyById(int id) =>
+      (select(currencies)..where((c) => c.id.equals(id))).getSingleOrNull();
+
+  Future<int> insertCurrency(CurrenciesCompanion entry) =>
+      into(currencies).insert(entry);
+
+  Future<bool> updateCurrency(CurrenciesCompanion entry) =>
+      update(currencies).replace(entry);
+
+  Future<int> deleteCurrency(int id) =>
+      (delete(currencies)..where((c) => c.id.equals(id))).go();
+
+  Future<int> updateExchangeRate(int id, double rate) =>
+      (update(currencies)..where((c) => c.id.equals(id))).write(
+        CurrenciesCompanion(
+          exchangeRate: Value(rate),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+  Future<int> getCurrencyCount(String userId) async {
+    final countExpr = currencies.id.count();
+    final query =
+        selectOnly(currencies)
+          ..addColumns([countExpr])
+          ..where(currencies.userId.equals(userId));
+    final row = await query.getSingle();
+    return row.read(countExpr)!;
+  }
+
+  /// Returns true if any non-archived account for [userId] uses [currencyCode].
+  Future<bool> isCurrencyInUse(String currencyCode, String userId) async {
+    final query = select(accounts)..where(
+      (a) =>
+          a.userId.equals(userId) &
+          a.currency.equals(currencyCode) &
+          a.isArchived.equals(false),
+    );
+    final rows = await query.get();
+    return rows.isNotEmpty;
+  }
+
+  // ── Analytics ─────────────────────────────────────────────────────────────
 
   /// Calculates the total **cents** spent in [period] for a [categoryId]
   /// (or all categories if null).

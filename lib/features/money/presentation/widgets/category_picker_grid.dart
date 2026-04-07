@@ -5,10 +5,10 @@ import 'package:track/features/money/presentation/utils/money_icon_resolver.dart
 
 class CategoryPickerGrid extends StatelessWidget {
   const CategoryPickerGrid({
-    super.key,
     required this.categories,
     required this.selectedId,
     required this.onSelected,
+    super.key,
   });
 
   final List<CategoryEntity> categories;

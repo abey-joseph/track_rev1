@@ -13,6 +13,6 @@ String formatCents(int cents) {
 /// Formats cents with a currency symbol prefix.
 ///
 /// Example: `formatCurrency(4250)` → `"\$42.50"`
-String formatCurrency(int cents, {String symbol = '\$'}) {
+String formatCurrency(int cents, {String symbol = r'$'}) {
   return '$symbol${formatCents(cents)}';
 }

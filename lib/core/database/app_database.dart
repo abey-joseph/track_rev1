@@ -12,9 +12,11 @@ import 'package:track/core/database/tables/habit_streaks_table.dart';
 import 'package:track/core/database/tables/habits_table.dart';
 import 'package:track/core/database/tables/insights_table.dart';
 import 'package:track/core/database/tables/transactions_table.dart';
+import 'package:track/core/database/tables/currencies_table.dart';
 import 'package:track/core/database/tables/user_settings_table.dart';
 
 export 'tables/accounts_table.dart';
+export 'tables/currencies_table.dart';
 export 'tables/budgets_table.dart';
 export 'tables/categories_table.dart';
 export 'tables/habit_logs_table.dart';
@@ -35,6 +37,7 @@ part 'app_database.g.dart';
     Categories,
     Transactions,
     Budgets,
+    Currencies,
     Insights,
     UserSettings,
   ],
@@ -44,7 +47,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -58,6 +61,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await _seedDefaultCategories();
+      }
+      if (from < 4) {
+        await m.addColumn(accounts, accounts.description);
+        await m.createTable(currencies);
       }
     },
   );

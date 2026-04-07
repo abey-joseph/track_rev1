@@ -16,6 +16,8 @@ import 'package:track/features/money/presentation/widgets/money_overview_card.da
 import 'package:track/features/money/presentation/widgets/transaction_date_group.dart';
 import 'package:track/features/money/presentation/widgets/transaction_list_item.dart';
 
+enum _MoneyMenuOption { accounts, currencies }
+
 @RoutePage()
 class MoneyPage extends StatelessWidget {
   const MoneyPage({super.key});
@@ -43,6 +45,37 @@ class _MoneyView extends StatelessWidget {
             icon: const Icon(Icons.receipt_long_rounded),
             tooltip: 'All Transactions',
             onPressed: () => context.router.push(const AllTransactionsRoute()),
+          ),
+          PopupMenuButton<_MoneyMenuOption>(
+            icon: const Icon(Icons.more_vert_rounded),
+            tooltip: 'More options',
+            onSelected: (option) {
+              switch (option) {
+                case _MoneyMenuOption.accounts:
+                  context.router.push(const AccountsRoute());
+                case _MoneyMenuOption.currencies:
+                  context.router.push(const CurrencyRoute());
+              }
+            },
+            itemBuilder:
+                (_) => const [
+                  PopupMenuItem(
+                    value: _MoneyMenuOption.accounts,
+                    child: ListTile(
+                      leading: Icon(Icons.account_balance_wallet_rounded),
+                      title: Text('Accounts'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: _MoneyMenuOption.currencies,
+                    child: ListTile(
+                      leading: Icon(Icons.currency_exchange_rounded),
+                      title: Text('Currencies'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
           ),
         ],
       ),

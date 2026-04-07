@@ -1,9 +1,6 @@
 import 'package:drift/drift.dart';
 
 import 'package:track/core/database/app_database.dart';
-import 'package:track/core/database/tables/habit_logs_table.dart';
-import 'package:track/core/database/tables/habit_streaks_table.dart';
-import 'package:track/core/database/tables/habits_table.dart';
 
 part 'habits_dao.g.dart';
 

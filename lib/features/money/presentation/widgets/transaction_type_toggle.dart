@@ -3,9 +3,9 @@ import 'package:track/features/money/domain/entities/transaction_entity.dart';
 
 class TransactionTypeToggle extends StatelessWidget {
   const TransactionTypeToggle({
-    super.key,
     required this.selected,
     required this.onChanged,
+    super.key,
   });
 
   final TransactionType selected;

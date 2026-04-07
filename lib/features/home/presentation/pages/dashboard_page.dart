@@ -1,24 +1,24 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/core/router/app_router.gr.dart';
-import 'package:flutter/foundation.dart';
+import 'package:track/features/habits/domain/entities/habit_entity.dart';
 import 'package:track/features/habits/domain/entities/habit_with_details.dart';
+import 'package:track/features/habits/domain/helpers/completion_helpers.dart';
 import 'package:track/features/habits/presentation/bloc/habits_bloc.dart';
 import 'package:track/features/habits/presentation/bloc/habits_event.dart';
 import 'package:track/features/habits/presentation/bloc/habits_state.dart';
 import 'package:track/features/habits/presentation/utils/habit_icon_resolver.dart';
-import 'package:track/features/habits/domain/entities/habit_entity.dart';
-import 'package:track/features/habits/domain/helpers/completion_helpers.dart';
 import 'package:track/features/habits/presentation/widgets/day_indicator.dart';
+import 'package:track/features/habits/presentation/widgets/measurable_log_sheet.dart';
 import 'package:track/features/home/presentation/widgets/ai_insight_card.dart';
 import 'package:track/features/home/presentation/widgets/recent_activity_feed.dart';
 import 'package:track/features/home/presentation/widgets/spending_summary_card.dart';
 import 'package:track/features/home/presentation/widgets/streak_score_card.dart';
-import 'package:track/features/habits/presentation/widgets/measurable_log_sheet.dart';
 import 'package:track/features/home/presentation/widgets/today_habits_section.dart';
-import 'package:intl/intl.dart';
 
 @RoutePage()
 class DashboardPage extends StatelessWidget {

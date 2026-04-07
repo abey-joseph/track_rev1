@@ -186,7 +186,7 @@ class _AmountField extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  '\$',
+                  r'$',
                   style: textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w300,
                     color: colorScheme.onSurface.withValues(alpha: 0.4),

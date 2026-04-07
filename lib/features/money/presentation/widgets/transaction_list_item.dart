@@ -7,8 +7,8 @@ import 'package:track/features/money/presentation/utils/money_icon_resolver.dart
 
 class TransactionListItem extends StatelessWidget {
   const TransactionListItem({
-    super.key,
     required this.transaction,
+    super.key,
     this.onTap,
   });
 

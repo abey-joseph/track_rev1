@@ -4,7 +4,7 @@ import 'package:track/features/money/domain/entities/money_summary.dart';
 import 'package:track/features/money/presentation/utils/currency_formatter.dart';
 
 class MoneyOverviewCard extends StatelessWidget {
-  const MoneyOverviewCard({super.key, required this.summary});
+  const MoneyOverviewCard({required this.summary, super.key});
 
   final MoneySummary summary;
 

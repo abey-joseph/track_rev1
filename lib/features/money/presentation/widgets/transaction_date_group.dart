@@ -5,9 +5,9 @@ import 'package:track/features/money/presentation/widgets/transaction_list_item.
 
 class TransactionDateGroup extends StatelessWidget {
   const TransactionDateGroup({
-    super.key,
     required this.dateLabel,
     required this.transactions,
+    super.key,
   });
 
   final String dateLabel;

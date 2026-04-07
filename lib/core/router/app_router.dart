@@ -46,6 +46,17 @@ class AppRouter extends RootStackRouter {
     ),
     AutoRoute(page: AccountsRoute.page),
     AutoRoute(page: AccountDetailRoute.page, path: '/account/:id'),
+    CustomRoute<AccountCreateEditRoute>(
+      page: AccountCreateEditRoute.page,
+      fullscreenDialog: true,
+      transitionsBuilder: TransitionsBuilders.slideBottom,
+    ),
+    AutoRoute(page: CurrencyRoute.page),
+    CustomRoute<CurrencyCreateEditRoute>(
+      page: CurrencyCreateEditRoute.page,
+      fullscreenDialog: true,
+      transitionsBuilder: TransitionsBuilders.slideBottom,
+    ),
     AutoRoute(page: BudgetRoute.page),
     AutoRoute(page: BudgetDetailRoute.page, path: '/budget/:id'),
 

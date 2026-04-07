@@ -317,7 +317,6 @@ class _DescriptionField extends StatelessWidget {
           ),
         ),
       ),
-      maxLines: 1,
       textCapitalization: TextCapitalization.sentences,
     );
   }

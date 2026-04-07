@@ -5,10 +5,10 @@ import 'package:track/features/money/presentation/utils/money_icon_resolver.dart
 
 class AccountPickerGrid extends StatelessWidget {
   const AccountPickerGrid({
-    super.key,
     required this.accounts,
     required this.selectedId,
     required this.onSelected,
+    super.key,
   });
 
   final List<AccountEntity> accounts;
