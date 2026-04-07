@@ -242,32 +242,43 @@ class _NameFieldState extends State<_NameField> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Account Name',
-            style: context.textTheme.labelLarge?.copyWith(
-              color: context.colorScheme.onSurface.withValues(alpha: 0.7),
+    return BlocListener<AccountFormBloc, AccountFormState>(
+      listenWhen: (prev, curr) => prev.name != curr.name,
+      listener: (context, state) {
+        if (_controller.text != state.name) {
+          _controller.text = state.name;
+          _controller.selection = TextSelection.collapsed(
+            offset: state.name.length,
+          );
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Account Name',
+              style: context.textTheme.labelLarge?.copyWith(
+                color: context.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _controller,
-            maxLength: 100,
-            onChanged:
-                (v) => context.read<AccountFormBloc>().add(
-                  AccountFormEvent.nameChanged(v),
-                ),
-            decoration: const InputDecoration(
-              hintText: 'e.g. Cash, Savings…',
-              counterText: '',
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              maxLength: 100,
+              onChanged:
+                  (v) => context.read<AccountFormBloc>().add(
+                    AccountFormEvent.nameChanged(v),
+                  ),
+              decoration: const InputDecoration(
+                hintText: 'e.g. Cash, Savings…',
+                counterText: '',
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-        ],
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
@@ -300,33 +311,44 @@ class _DescriptionFieldState extends State<_DescriptionField> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Description (optional)',
-            style: context.textTheme.labelLarge?.copyWith(
-              color: context.colorScheme.onSurface.withValues(alpha: 0.7),
+    return BlocListener<AccountFormBloc, AccountFormState>(
+      listenWhen: (prev, curr) => prev.description != curr.description,
+      listener: (context, state) {
+        if (_controller.text != state.description) {
+          _controller.text = state.description;
+          _controller.selection = TextSelection.collapsed(
+            offset: state.description.length,
+          );
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Description (optional)',
+              style: context.textTheme.labelLarge?.copyWith(
+                color: context.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _controller,
-            maxLines: 2,
-            maxLength: 200,
-            onChanged:
-                (v) => context.read<AccountFormBloc>().add(
-                  AccountFormEvent.descriptionChanged(v),
-                ),
-            decoration: const InputDecoration(
-              hintText: 'Optional notes about this account',
-              counterText: '',
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              maxLines: 2,
+              maxLength: 200,
+              onChanged:
+                  (v) => context.read<AccountFormBloc>().add(
+                    AccountFormEvent.descriptionChanged(v),
+                  ),
+              decoration: const InputDecoration(
+                hintText: 'Optional notes about this account',
+                counterText: '',
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-        ],
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
@@ -364,7 +386,7 @@ class _CurrencySection extends StatelessWidget {
                 const CircularProgressIndicator()
               else
                 DropdownButtonFormField<String>(
-                  value:
+                  initialValue:
                       currencies.any((c) => c.code == selectedCode)
                           ? selectedCode
                           : null,

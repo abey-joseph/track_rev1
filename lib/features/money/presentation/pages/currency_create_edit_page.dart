@@ -157,29 +157,40 @@ class _NameFieldState extends State<_NameField> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Currency Name',
-          style: context.textTheme.labelLarge?.copyWith(
-            color: context.colorScheme.onSurface.withValues(alpha: 0.7),
+    return BlocListener<CurrencyFormBloc, CurrencyFormState>(
+      listenWhen: (prev, curr) => prev.name != curr.name,
+      listener: (context, state) {
+        if (_controller.text != state.name) {
+          _controller.text = state.name;
+          _controller.selection = TextSelection.collapsed(
+            offset: state.name.length,
+          );
+        }
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Currency Name',
+            style: context.textTheme.labelLarge?.copyWith(
+              color: context.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _controller,
-          maxLength: 100,
-          onChanged:
-              (v) => context.read<CurrencyFormBloc>().add(
-                CurrencyFormEvent.nameChanged(v),
-              ),
-          decoration: const InputDecoration(
-            hintText: 'e.g. US Dollar, Euro…',
-            counterText: '',
+          const SizedBox(height: 8),
+          TextField(
+            controller: _controller,
+            maxLength: 100,
+            onChanged:
+                (v) => context.read<CurrencyFormBloc>().add(
+                  CurrencyFormEvent.nameChanged(v),
+                ),
+            decoration: const InputDecoration(
+              hintText: 'e.g. US Dollar, Euro…',
+              counterText: '',
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -212,43 +223,55 @@ class _CodeFieldState extends State<_CodeField> {
 
   @override
   Widget build(BuildContext context) {
-    final isEdit = context.select<CurrencyFormBloc, bool>(
-      (b) => b.state.isEditMode,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Currency Code (ISO 4217)',
-          style: context.textTheme.labelLarge?.copyWith(
-            color: context.colorScheme.onSurface.withValues(alpha: 0.7),
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _controller,
-          maxLength: 10,
-          // Code should not change on edit since it's referenced by accounts
-          enabled: !isEdit,
-          textCapitalization: TextCapitalization.characters,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp('[A-Za-z]')),
-          ],
-          onChanged:
-              (v) => context.read<CurrencyFormBloc>().add(
-                CurrencyFormEvent.codeChanged(v),
+    return BlocListener<CurrencyFormBloc, CurrencyFormState>(
+      listenWhen: (prev, curr) => prev.code != curr.code,
+      listener: (context, state) {
+        if (_controller.text != state.code) {
+          _controller.text = state.code;
+          _controller.selection = TextSelection.collapsed(
+            offset: state.code.length,
+          );
+        }
+      },
+      child: BlocSelector<CurrencyFormBloc, CurrencyFormState, bool>(
+        selector: (s) => s.isEditMode,
+        builder: (context, isEdit) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Currency Code (ISO 4217)',
+                style: context.textTheme.labelLarge?.copyWith(
+                  color: context.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
               ),
-          decoration: InputDecoration(
-            hintText: 'e.g. USD, EUR, GBP',
-            counterText: '',
-            helperText:
-                isEdit
-                    ? 'Currency code cannot be changed after creation'
-                    : null,
-          ),
-        ),
-      ],
+              const SizedBox(height: 8),
+              TextField(
+                controller: _controller,
+                maxLength: 10,
+                // Code should not change on edit since it's referenced by accounts
+                enabled: !isEdit,
+                textCapitalization: TextCapitalization.characters,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp('[A-Za-z]')),
+                ],
+                onChanged:
+                    (v) => context.read<CurrencyFormBloc>().add(
+                      CurrencyFormEvent.codeChanged(v),
+                    ),
+                decoration: InputDecoration(
+                  hintText: 'e.g. USD, EUR, GBP',
+                  counterText: '',
+                  helperText:
+                      isEdit
+                          ? 'Currency code cannot be changed after creation'
+                          : null,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -281,29 +304,40 @@ class _SymbolFieldState extends State<_SymbolField> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Symbol',
-          style: context.textTheme.labelLarge?.copyWith(
-            color: context.colorScheme.onSurface.withValues(alpha: 0.7),
+    return BlocListener<CurrencyFormBloc, CurrencyFormState>(
+      listenWhen: (prev, curr) => prev.symbol != curr.symbol,
+      listener: (context, state) {
+        if (_controller.text != state.symbol) {
+          _controller.text = state.symbol;
+          _controller.selection = TextSelection.collapsed(
+            offset: state.symbol.length,
+          );
+        }
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Symbol',
+            style: context.textTheme.labelLarge?.copyWith(
+              color: context.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _controller,
-          maxLength: 10,
-          onChanged:
-              (v) => context.read<CurrencyFormBloc>().add(
-                CurrencyFormEvent.symbolChanged(v),
-              ),
-          decoration: const InputDecoration(
-            hintText: r'e.g. $, €, £',
-            counterText: '',
+          const SizedBox(height: 8),
+          TextField(
+            controller: _controller,
+            maxLength: 10,
+            onChanged:
+                (v) => context.read<CurrencyFormBloc>().add(
+                  CurrencyFormEvent.symbolChanged(v),
+                ),
+            decoration: const InputDecoration(
+              hintText: r'e.g. $, €, £',
+              counterText: '',
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -336,77 +370,89 @@ class _ExchangeRateSectionState extends State<_ExchangeRateSection> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<CurrencyFormBloc, CurrencyFormState, (bool, String?)>(
-      selector: (s) => (s.isDefault, s.defaultCurrencyCode),
-      builder: (context, data) {
-        final (isDefault, defaultCode) = data;
+    return BlocListener<CurrencyFormBloc, CurrencyFormState>(
+      listenWhen:
+          (prev, curr) => prev.exchangeRateText != curr.exchangeRateText,
+      listener: (context, state) {
+        if (_controller.text != state.exchangeRateText) {
+          _controller.text = state.exchangeRateText;
+          _controller.selection = TextSelection.collapsed(
+            offset: state.exchangeRateText.length,
+          );
+        }
+      },
+      child: BlocSelector<CurrencyFormBloc, CurrencyFormState, (bool, String?)>(
+        selector: (s) => (s.isDefault, s.defaultCurrencyCode),
+        builder: (context, data) {
+          final (isDefault, defaultCode) = data;
 
-        if (isDefault) {
-          return Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: context.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 18,
-                  color: context.colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'This is the default currency. Its exchange rate is fixed at 1.00.',
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: context.colorScheme.onSurface.withValues(
-                        alpha: 0.6,
+          if (isDefault) {
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 18,
+                    color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This is the default currency. Its exchange rate is fixed at 1.00.',
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
                       ),
                     ),
                   ),
+                ],
+              ),
+            );
+          }
+
+          final label =
+              defaultCode != null
+                  ? 'Exchange Rate (1 $defaultCode = ? this currency)'
+                  : 'Exchange Rate vs Default Currency';
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: context.textTheme.labelLarge?.copyWith(
+                  color: context.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _controller,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
+                ],
+                onChanged:
+                    (v) => context.read<CurrencyFormBloc>().add(
+                      CurrencyFormEvent.exchangeRateChanged(v),
+                    ),
+                decoration: const InputDecoration(
+                  hintText: 'e.g. 82.5',
+                  helperText:
+                      'How many units of this currency equal 1 of the default',
+                ),
+              ),
+            ],
           );
-        }
-
-        final label =
-            defaultCode != null
-                ? 'Exchange Rate (1 $defaultCode = ? this currency)'
-                : 'Exchange Rate vs Default Currency';
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: context.textTheme.labelLarge?.copyWith(
-                color: context.colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _controller,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              ],
-              onChanged:
-                  (v) => context.read<CurrencyFormBloc>().add(
-                    CurrencyFormEvent.exchangeRateChanged(v),
-                  ),
-              decoration: const InputDecoration(
-                hintText: 'e.g. 82.5',
-                helperText:
-                    'How many units of this currency equal 1 of the default',
-              ),
-            ),
-          ],
-        );
-      },
+        },
+      ),
     );
   }
 }

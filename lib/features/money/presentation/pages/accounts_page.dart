@@ -185,6 +185,24 @@ class _AccountCard extends StatelessWidget {
                                     ),
                                   ),
                                 ),
+                              const SizedBox(width: 4),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap:
+                                    () => context.router.push(
+                                      AccountCreateEditRoute(account: account),
+                                    ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.edit_rounded,
+                                    size: 18,
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                           if (account.description != null &&
