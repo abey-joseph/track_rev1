@@ -49,4 +49,13 @@ sealed class AllTransactionsEvent with _$AllTransactionsEvent {
 
   const factory AllTransactionsEvent.filtersCleared() =
       AllTransactionsFiltersCleared;
+
+  const factory AllTransactionsEvent.bookmarkToggled({
+    required int transactionId,
+    required bool isBookmarked,
+  }) = AllTransactionsBookmarkToggled;
+
+  const factory AllTransactionsEvent.deleteRequested({
+    required TransactionEntity transaction,
+  }) = AllTransactionsDeleteRequested;
 }

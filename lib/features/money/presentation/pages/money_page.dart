@@ -16,7 +16,7 @@ import 'package:track/features/money/presentation/widgets/money_overview_card.da
 import 'package:track/features/money/presentation/widgets/transaction_date_group.dart';
 import 'package:track/features/money/presentation/widgets/transaction_list_item.dart';
 
-enum _MoneyMenuOption { accounts, currencies }
+enum _MoneyMenuOption { bookmarks, accounts, currencies }
 
 @RoutePage()
 class MoneyPage extends StatelessWidget {
@@ -51,6 +51,8 @@ class _MoneyView extends StatelessWidget {
             tooltip: 'More options',
             onSelected: (option) {
               switch (option) {
+                case _MoneyMenuOption.bookmarks:
+                  context.router.push(const BookmarksRoute());
                 case _MoneyMenuOption.accounts:
                   context.router.push(const AccountsRoute());
                 case _MoneyMenuOption.currencies:
@@ -59,6 +61,14 @@ class _MoneyView extends StatelessWidget {
             },
             itemBuilder:
                 (_) => const [
+                  PopupMenuItem(
+                    value: _MoneyMenuOption.bookmarks,
+                    child: ListTile(
+                      leading: Icon(Icons.bookmark_rounded),
+                      title: Text('Bookmarks'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
                   PopupMenuItem(
                     value: _MoneyMenuOption.accounts,
                     child: ListTile(

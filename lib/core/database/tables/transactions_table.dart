@@ -27,6 +27,7 @@ class Transactions extends Table {
   /// Links the two rows that form a transfer pair.
   IntColumn get transferPeerId =>
       integer().nullable().references(Transactions, #id)();
+  BoolColumn get isBookmarked => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }

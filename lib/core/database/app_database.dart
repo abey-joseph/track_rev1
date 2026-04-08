@@ -1,5 +1,4 @@
 import 'package:drift/drift.dart';
-
 import 'package:track/core/database/daos/habits_dao.dart';
 import 'package:track/core/database/daos/insights_dao.dart';
 import 'package:track/core/database/daos/money_dao.dart';
@@ -7,18 +6,18 @@ import 'package:track/core/database/daos/settings_dao.dart';
 import 'package:track/core/database/tables/accounts_table.dart';
 import 'package:track/core/database/tables/budgets_table.dart';
 import 'package:track/core/database/tables/categories_table.dart';
+import 'package:track/core/database/tables/currencies_table.dart';
 import 'package:track/core/database/tables/habit_logs_table.dart';
 import 'package:track/core/database/tables/habit_streaks_table.dart';
 import 'package:track/core/database/tables/habits_table.dart';
 import 'package:track/core/database/tables/insights_table.dart';
 import 'package:track/core/database/tables/transactions_table.dart';
-import 'package:track/core/database/tables/currencies_table.dart';
 import 'package:track/core/database/tables/user_settings_table.dart';
 
 export 'tables/accounts_table.dart';
-export 'tables/currencies_table.dart';
 export 'tables/budgets_table.dart';
 export 'tables/categories_table.dart';
+export 'tables/currencies_table.dart';
 export 'tables/habit_logs_table.dart';
 export 'tables/habit_streaks_table.dart';
 export 'tables/habits_table.dart';
@@ -47,7 +46,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -65,6 +64,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) {
         await m.addColumn(accounts, accounts.description);
         await m.createTable(currencies);
+      }
+      if (from < 5) {
+        await m.addColumn(transactions, transactions.isBookmarked);
       }
     },
   );

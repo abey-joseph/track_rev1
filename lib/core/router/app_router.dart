@@ -38,6 +38,7 @@ class AppRouter extends RootStackRouter {
 
     // Money detail routes
     AutoRoute(page: AllTransactionsRoute.page),
+    AutoRoute(page: BookmarksRoute.page),
     AutoRoute(page: TransactionDetailRoute.page, path: '/transaction/:id'),
     CustomRoute<TransactionCreateEditRoute>(
       page: TransactionCreateEditRoute.page,

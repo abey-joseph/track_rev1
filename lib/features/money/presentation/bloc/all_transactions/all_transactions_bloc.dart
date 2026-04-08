@@ -1,9 +1,11 @@
 import 'package:bloc/bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:track/features/money/domain/entities/transaction_entity.dart';
+import 'package:track/features/money/domain/usecases/delete_transaction.dart';
 import 'package:track/features/money/domain/usecases/get_accounts.dart';
 import 'package:track/features/money/domain/usecases/get_categories.dart';
 import 'package:track/features/money/domain/usecases/get_transactions.dart';
+import 'package:track/features/money/domain/usecases/set_transaction_bookmark.dart';
 import 'package:track/features/money/presentation/bloc/all_transactions/all_transactions_event.dart';
 import 'package:track/features/money/presentation/bloc/all_transactions/all_transactions_state.dart';
 
@@ -14,6 +16,8 @@ class AllTransactionsBloc
     this._getTransactions,
     this._getCategories,
     this._getAccounts,
+    this._setBookmark,
+    this._deleteTransaction,
   ) : super(const AllTransactionsState()) {
     on<AllTransactionsLoadRequested>(_onLoad);
     on<AllTransactionsMonthChanged>(_onMonthChanged);
@@ -26,11 +30,15 @@ class AllTransactionsBloc
     on<AllTransactionsAmountRangeChanged>(_onAmountRangeChanged);
     on<AllTransactionsSortChanged>(_onSortChanged);
     on<AllTransactionsFiltersCleared>(_onFiltersCleared);
+    on<AllTransactionsBookmarkToggled>(_onBookmarkToggled);
+    on<AllTransactionsDeleteRequested>(_onDeleteRequested);
   }
 
   final GetTransactionsWithDetails _getTransactions;
   final GetCategories _getCategories;
   final GetAccounts _getAccounts;
+  final SetTransactionBookmark _setBookmark;
+  final DeleteTransaction _deleteTransaction;
   String? _userId;
 
   Future<void> _onLoad(
@@ -210,6 +218,52 @@ class AllTransactionsBloc
         minAmountCents: null,
         maxAmountCents: null,
       ),
+    );
+  }
+
+  Future<void> _onDeleteRequested(
+    AllTransactionsDeleteRequested event,
+    Emitter<AllTransactionsState> emit,
+  ) async {
+    final result = await _deleteTransaction(event.transaction);
+    result.fold(
+      (_) {},
+      (_) {
+        final updated =
+            state.allTransactions
+                .where((t) => t.transaction.id != event.transaction.id)
+                .toList();
+        emit(state.copyWith(allTransactions: updated));
+      },
+    );
+  }
+
+  Future<void> _onBookmarkToggled(
+    AllTransactionsBookmarkToggled event,
+    Emitter<AllTransactionsState> emit,
+  ) async {
+    final result = await _setBookmark(
+      BookmarkParams(
+        transactionId: event.transactionId,
+        isBookmarked: event.isBookmarked,
+      ),
+    );
+    result.fold(
+      (_) {},
+      (_) {
+        final updated =
+            state.allTransactions.map((t) {
+              if (t.transaction.id == event.transactionId) {
+                return t.copyWith(
+                  transaction: t.transaction.copyWith(
+                    isBookmarked: event.isBookmarked,
+                  ),
+                );
+              }
+              return t;
+            }).toList();
+        emit(state.copyWith(allTransactions: updated));
+      },
     );
   }
 }

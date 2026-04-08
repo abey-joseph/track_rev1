@@ -32,6 +32,20 @@ abstract class MoneyRepository {
 
   Future<Either<Failure, int>> createTransaction(TransactionEntity transaction);
 
+  Future<Either<Failure, void>> deleteTransaction(
+    TransactionEntity transaction,
+  );
+
+  Stream<Either<Failure, List<TransactionWithDetails>>>
+  watchBookmarkedTransactions(
+    String userId,
+  );
+
+  Future<Either<Failure, void>> setBookmark(
+    int transactionId, {
+    required bool isBookmarked,
+  });
+
   // ── Accounts ──────────────────────────────────────────────────────────────
 
   Future<Either<Failure, List<AccountEntity>>> getAccounts(String userId);

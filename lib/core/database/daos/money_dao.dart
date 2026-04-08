@@ -145,6 +145,21 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
   Future<Transaction?> getTransactionById(int id) =>
       (select(transactions)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Stream<List<Transaction>> watchBookmarkedTransactions(String userId) =>
+      (select(transactions)
+            ..where(
+              (t) => t.userId.equals(userId) & t.isBookmarked.equals(true),
+            )
+            ..orderBy([(t) => OrderingTerm.desc(t.transactionDate)]))
+          .watch();
+
+  Future<void> setBookmark(
+    int transactionId, {
+    required bool isBookmarked,
+  }) => (update(transactions)..where((t) => t.id.equals(transactionId))).write(
+    TransactionsCompanion(isBookmarked: Value(isBookmarked)),
+  );
+
   /// Inserts a transaction and adjusts [accountId]'s balance atomically.
   ///
   /// [balanceDelta] should be positive for income and negative for expenses

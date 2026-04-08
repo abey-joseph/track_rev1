@@ -637,39 +637,15 @@ class _TransactionList extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        return GestureDetector(
-          onHorizontalDragEnd:
-              (details) => _handleSwipe(context, details, year, month),
-          child: AnimatedSwitcher(
-            duration: AnimationConstants.defaultDuration,
-            child:
-                transactions.isEmpty
-                    ? _buildEmptyState(context, year, month)
-                    : _buildGroupedList(context, transactions, year, month),
-          ),
+        return AnimatedSwitcher(
+          duration: AnimationConstants.defaultDuration,
+          child:
+              transactions.isEmpty
+                  ? _buildEmptyState(context, year, month)
+                  : _buildGroupedList(context, transactions, year, month),
         );
       },
     );
-  }
-
-  void _handleSwipe(
-    BuildContext context,
-    DragEndDetails details,
-    int year,
-    int month,
-  ) {
-    final velocity = details.velocity.pixelsPerSecond.dx;
-    if (velocity < -300) {
-      final (ny, nm) = _nextMonth(year, month);
-      context.read<AllTransactionsBloc>().add(
-        AllTransactionsEvent.monthChanged(year: ny, month: nm),
-      );
-    } else if (velocity > 300) {
-      final (py, pm) = _prevMonth(year, month);
-      context.read<AllTransactionsBloc>().add(
-        AllTransactionsEvent.monthChanged(year: py, month: pm),
-      );
-    }
   }
 
   Widget _buildEmptyState(BuildContext context, int year, int month) {
@@ -729,7 +705,7 @@ class _TransactionList extends StatelessWidget {
           final item = items[index];
           return switch (item) {
             _HeaderItem(:final label) => _DateHeader(label: label),
-            _TransactionItem(:final transaction) => _DenseTransactionRow(
+            _TransactionItem(:final transaction) => _SwipeableTransactionRow(
               transaction: transaction,
             ),
           };
@@ -803,60 +779,226 @@ class _DenseTransactionRow extends StatelessWidget {
     final amountColor =
         isIncome ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
 
-    return InkWell(
-      onTap: () {
-        // TODO: navigate to transaction detail
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            // Color dot
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: categoryColor,
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          // Color dot
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: categoryColor,
             ),
-            const SizedBox(width: 10),
-            // Title
-            Expanded(
-              flex: 3,
-              child: Text(
-                txn.title,
-                style: textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Category
-            Expanded(
-              flex: 2,
-              child: Text(
-                transaction.categoryName,
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.55),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Amount
-            Text(
-              '${isIncome ? '+' : '-'}${formatCurrency(txn.amountCents)}',
+          ),
+          const SizedBox(width: 10),
+          // Title
+          Expanded(
+            flex: 3,
+            child: Text(
+              txn.title,
               style: textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: amountColor,
-                fontFeatures: const [FontFeature.tabularFigures()],
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Category
+          Expanded(
+            flex: 2,
+            child: Text(
+              transaction.categoryName,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.55),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Amount
+          Text(
+            '${isIncome ? '+' : '-'}${formatCurrency(txn.amountCents)}',
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: amountColor,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Swipeable Transaction Row
+// ---------------------------------------------------------------------------
+
+class _SwipeableTransactionRow extends StatefulWidget {
+  const _SwipeableTransactionRow({required this.transaction});
+
+  final TransactionWithDetails transaction;
+
+  @override
+  State<_SwipeableTransactionRow> createState() =>
+      _SwipeableTransactionRowState();
+}
+
+class _SwipeableTransactionRowState extends State<_SwipeableTransactionRow> {
+  static const double _maxReveal = 168; // 3 buttons × 56px
+  double _offset = 0;
+  bool _isDragging = false;
+
+  void _close() => setState(() {
+    _offset = 0;
+    _isDragging = false;
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    final txn = widget.transaction.transaction;
+
+    return GestureDetector(
+      onHorizontalDragStart: (_) => setState(() => _isDragging = true),
+      onHorizontalDragUpdate: (d) {
+        setState(() {
+          _offset = (_offset + d.delta.dx).clamp(-_maxReveal, 0);
+        });
+      },
+      onHorizontalDragEnd: (d) {
+        final vel = d.primaryVelocity ?? 0;
+        final open = _offset < -_maxReveal / 2 || vel < -300;
+        setState(() {
+          _isDragging = false;
+          _offset = open ? -_maxReveal : 0;
+        });
+      },
+      onTap: () {
+        if (_offset != 0) {
+          _close();
+        } else {
+          setState(() {
+            _isDragging = false;
+            _offset = -_maxReveal;
+          });
+        }
+      },
+      child: Stack(
+        children: [
+          // Action buttons (behind the row)
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: SizedBox(
+                width: _maxReveal,
+                child: Row(
+                  children: [
+                    _ActionButton(
+                      icon:
+                          txn.isBookmarked
+                              ? Icons.bookmark_rounded
+                              : Icons.bookmark_border_rounded,
+                      label: txn.isBookmarked ? 'Saved' : 'Save',
+                      color: colorScheme.primary,
+                      onTap: () {
+                        context.read<AllTransactionsBloc>().add(
+                          AllTransactionsEvent.bookmarkToggled(
+                            transactionId: txn.id,
+                            isBookmarked: !txn.isBookmarked,
+                          ),
+                        );
+                        _close();
+                      },
+                    ),
+                    _ActionButton(
+                      icon: Icons.copy_rounded,
+                      label: 'Copy',
+                      color: Colors.green,
+                      onTap: _close,
+                    ),
+                    _ActionButton(
+                      icon: Icons.delete_rounded,
+                      label: 'Delete',
+                      color: Colors.red,
+                      onTap: () async {
+                        _close();
+                        final confirmed = await _showDeleteConfirmation(
+                          context,
+                          widget.transaction.transaction.title,
+                        );
+                        if (confirmed == true && context.mounted) {
+                          context.read<AllTransactionsBloc>().add(
+                            AllTransactionsEvent.deleteRequested(
+                              transaction: widget.transaction.transaction,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
+          // Main row (slides left to reveal buttons)
+          AnimatedContainer(
+            duration:
+                _isDragging ? Duration.zero : const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            transform: Matrix4.translationValues(_offset, 0, 0),
+            color: colorScheme.surface,
+            child: _DenseTransactionRow(transaction: widget.transaction),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Action Button (shared with BookmarksPage)
+// ---------------------------------------------------------------------------
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: ColoredBox(
+          color: color,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 20),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -901,3 +1043,30 @@ Color _parseColor(String hex) {
   final cleaned = hex.replaceFirst('#', '');
   return Color(int.parse('FF$cleaned', radix: 16));
 }
+
+Future<bool?> _showDeleteConfirmation(
+  BuildContext context,
+  String title,
+) => showDialog<bool>(
+  context: context,
+  builder:
+      (ctx) => AlertDialog(
+        title: const Text('Delete transaction'),
+        content: Text(
+          'Delete "$title"? This will also reverse the account balance.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+);

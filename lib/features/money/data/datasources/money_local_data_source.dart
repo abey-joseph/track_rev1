@@ -20,6 +20,12 @@ abstract class MoneyLocalDataSource {
 
   Future<int> insertTransaction(TransactionsCompanion entry, int balanceDelta);
 
+  Future<void> deleteTransaction(int id, int accountId, int balanceDelta);
+
+  Stream<List<Transaction>> watchBookmarkedTransactions(String userId);
+
+  Future<void> setBookmark(int transactionId, {required bool isBookmarked});
+
   // ── Accounts ──────────────────────────────────────────────────────────────
 
   Future<List<Account>> getAccounts(String userId);
@@ -82,6 +88,43 @@ class MoneyLocalDataSourceImpl implements MoneyLocalDataSource {
         userId,
         fromDate: fromDate,
         toDate: toDate,
+      );
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> deleteTransaction(
+    int id,
+    int accountId,
+    int balanceDelta,
+  ) async {
+    try {
+      await _db.moneyDao.deleteTransaction(id, accountId, balanceDelta);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Stream<List<Transaction>> watchBookmarkedTransactions(String userId) {
+    try {
+      return _db.moneyDao.watchBookmarkedTransactions(userId);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> setBookmark(
+    int transactionId, {
+    required bool isBookmarked,
+  }) async {
+    try {
+      await _db.moneyDao.setBookmark(
+        transactionId,
+        isBookmarked: isBookmarked,
       );
     } catch (e) {
       throw CacheException(message: e.toString());

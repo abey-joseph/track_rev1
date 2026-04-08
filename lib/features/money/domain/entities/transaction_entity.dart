@@ -21,6 +21,7 @@ abstract class TransactionEntity with _$TransactionEntity {
     required String transactionDate,
     required DateTime createdAt,
     required DateTime updatedAt,
+    @Default(false) bool isBookmarked,
     String? note,
 
     /// ID of the paired transaction row for transfers. Null otherwise.

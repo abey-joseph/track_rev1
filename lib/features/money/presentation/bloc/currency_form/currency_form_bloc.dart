@@ -130,7 +130,7 @@ class CurrencyFormBloc extends Bloc<CurrencyFormEvent, CurrencyFormState> {
       code: state.code.trim().toUpperCase(),
       symbol: state.symbol.trim(),
       exchangeRate: state.isDefault ? 1.0 : (rate ?? 1.0),
-      isDefault: isEdit ? state.initialCurrency!.isDefault : false,
+      isDefault: isEdit && state.initialCurrency!.isDefault,
       createdAt: isEdit ? state.initialCurrency!.createdAt : now,
       updatedAt: now,
     );

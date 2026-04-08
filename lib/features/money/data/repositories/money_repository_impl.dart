@@ -148,6 +148,63 @@ class MoneyRepositoryImpl implements MoneyRepository {
   }
 
   @override
+  Future<Either<Failure, void>> deleteTransaction(
+    TransactionEntity transaction,
+  ) async {
+    try {
+      final balanceDelta =
+          transaction.type == TransactionType.income
+              ? transaction.amountCents
+              : -transaction.amountCents;
+      await _localDataSource.deleteTransaction(
+        transaction.id,
+        transaction.accountId,
+        balanceDelta,
+      );
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Stream<Either<Failure, List<TransactionWithDetails>>>
+  watchBookmarkedTransactions(
+    String userId,
+  ) {
+    return _localDataSource.watchBookmarkedTransactions(userId).asyncMap((
+      transactions,
+    ) async {
+      try {
+        final results = await Future.wait(
+          transactions.map((t) => _enrichTransaction(t.toEntity())),
+        );
+        return Right<Failure, List<TransactionWithDetails>>(results);
+      } on CacheException catch (e) {
+        return Left<Failure, List<TransactionWithDetails>>(
+          Failure.cache(message: e.message),
+        );
+      }
+    });
+  }
+
+  @override
+  Future<Either<Failure, void>> setBookmark(
+    int transactionId, {
+    required bool isBookmarked,
+  }) async {
+    try {
+      await _localDataSource.setBookmark(
+        transactionId,
+        isBookmarked: isBookmarked,
+      );
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
   Future<Either<Failure, int>> createTransaction(
     TransactionEntity transaction,
   ) async {

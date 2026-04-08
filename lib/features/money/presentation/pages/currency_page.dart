@@ -46,7 +46,6 @@ class _CurrencyView extends StatelessWidget {
             SnackBar(
               content: Text(state.deleteError!),
               backgroundColor: context.colorScheme.error,
-              duration: const Duration(seconds: 4),
             ),
           );
         }

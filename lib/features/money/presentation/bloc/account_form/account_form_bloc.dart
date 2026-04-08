@@ -137,7 +137,7 @@ class AccountFormBloc extends Bloc<AccountFormEvent, AccountFormState> {
       currency: state.currencyCode,
       iconName: state.iconName,
       colorHex: state.colorHex,
-      isDefault: isEdit ? state.initialAccount!.isDefault : false,
+      isDefault: isEdit && state.initialAccount!.isDefault,
       isArchived: false,
       sortOrder: isEdit ? state.initialAccount!.sortOrder : 0,
       createdAt: isEdit ? state.initialAccount!.createdAt : now,
