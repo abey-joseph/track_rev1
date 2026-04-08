@@ -92,9 +92,10 @@ class _AiInsightCardState extends State<AiInsightCard> {
                     color: colorScheme.onTertiaryContainer,
                   ),
                 ),
-                crossFadeState: _isExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
+                crossFadeState:
+                    _isExpanded
+                        ? CrossFadeState.showSecond
+                        : CrossFadeState.showFirst,
                 duration: AnimationConstants.defaultDuration,
                 sizeCurve: AnimationConstants.defaultCurve,
               ),

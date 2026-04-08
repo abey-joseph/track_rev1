@@ -17,6 +17,7 @@ abstract class AccountEntity with _$AccountEntity {
 
     /// ISO 4217 currency code, e.g. 'USD'.
     required String currency,
+
     required String iconName,
     required String colorHex,
     required bool isDefault,
@@ -24,5 +25,6 @@ abstract class AccountEntity with _$AccountEntity {
     required int sortOrder,
     required DateTime createdAt,
     required DateTime updatedAt,
+    String? description,
   }) = _AccountEntity;
 }

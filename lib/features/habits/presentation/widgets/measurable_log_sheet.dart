@@ -109,8 +109,9 @@ class _MeasurableLogSheetState extends State<MeasurableLogSheet> {
             child: TextFormField(
               controller: _controller,
               autofocus: true,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
@@ -136,8 +137,9 @@ class _MeasurableLogSheetState extends State<MeasurableLogSheet> {
               if (_isEditing)
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context)
-                        .pop<MeasurableLogResult>((value: null, delete: true));
+                    Navigator.of(
+                      context,
+                    ).pop<MeasurableLogResult>((value: null, delete: true));
                   },
                   child: Text(
                     'Delete',
@@ -164,7 +166,8 @@ class _MeasurableLogSheetState extends State<MeasurableLogSheet> {
   void _onSave() {
     if (!_formKey.currentState!.validate()) return;
     final value = double.parse(_controller.text.trim());
-    Navigator.of(context)
-        .pop<MeasurableLogResult>((value: value, delete: false));
+    Navigator.of(
+      context,
+    ).pop<MeasurableLogResult>((value: value, delete: false));
   }
 }

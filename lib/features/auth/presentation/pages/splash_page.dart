@@ -136,23 +136,24 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: isDark
-                  ? [
-                      colorScheme.surface,
-                      Color.lerp(
+              colors:
+                  isDark
+                      ? [
                         colorScheme.surface,
-                        colorScheme.primary,
-                        0.08,
-                      )!,
-                    ]
-                  : [
-                      colorScheme.surface,
-                      Color.lerp(
+                        Color.lerp(
+                          colorScheme.surface,
+                          colorScheme.primary,
+                          0.08,
+                        )!,
+                      ]
+                      : [
                         colorScheme.surface,
-                        colorScheme.primary,
-                        0.05,
-                      )!,
-                    ],
+                        Color.lerp(
+                          colorScheme.surface,
+                          colorScheme.primary,
+                          0.05,
+                        )!,
+                      ],
             ),
           ),
           child: Center(
@@ -161,7 +162,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               builder: (context, child) {
                 // Pulse value: 0 during entry, then 0↔1 repeating
                 final pulse = _pulseController.value;
-                final glowProgress = _glowExpand.value +
+                final glowProgress =
+                    _glowExpand.value +
                     (_entryController.isCompleted ? pulse * 0.3 : 0);
 
                 return Stack(
@@ -169,9 +171,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                   children: [
                     // Blurred glow that spreads slowly and fades
                     Opacity(
-                      opacity: _entryController.isCompleted
-                          ? 0.3 + (pulse * 0.3)
-                          : _glowExpand.value * _glowFade.value,
+                      opacity:
+                          _entryController.isCompleted
+                              ? 0.3 + (pulse * 0.3)
+                              : _glowExpand.value * _glowFade.value,
                       child: Container(
                         width: 100 + (glowProgress * 200),
                         height: 100 + (glowProgress * 200),
@@ -187,14 +190,16 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  colorScheme.primary.withValues(alpha: 0.15),
+                              color: colorScheme.primary.withValues(
+                                alpha: 0.15,
+                              ),
                               blurRadius: 40 + (glowProgress * 60),
                               spreadRadius: glowProgress * 30,
                             ),
                             BoxShadow(
-                              color:
-                                  colorScheme.tertiary.withValues(alpha: 0.1),
+                              color: colorScheme.tertiary.withValues(
+                                alpha: 0.1,
+                              ),
                               blurRadius: 60 + (glowProgress * 40),
                               spreadRadius: glowProgress * 20,
                             ),
@@ -231,14 +236,13 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                             const SizedBox(height: 24),
                             Text(
                               'Track',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: colorScheme.onSurface,
-                                    letterSpacing: 2,
-                                  ),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.onSurface,
+                                letterSpacing: 2,
+                              ),
                             ),
                           ],
                         ),

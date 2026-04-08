@@ -59,9 +59,10 @@ class HabitsRepositoryImpl implements HabitsRepository {
     final today = DateTime(now.year, now.month, now.day);
 
     // For weekly habits, fetch last 7 weeks (49 days); otherwise last 7 days.
-    final cutoff = habit.frequencyType == HabitFrequency.weekly
-        ? _mondayOfWeek(today).subtract(const Duration(days: 6 * 7))
-        : today.subtract(const Duration(days: 6));
+    final cutoff =
+        habit.frequencyType == HabitFrequency.weekly
+            ? _mondayOfWeek(today).subtract(const Duration(days: 6 * 7))
+            : today.subtract(const Duration(days: 6));
 
     final recentLogs =
         logsRaw.map((l) => l.toEntity()).where((l) {

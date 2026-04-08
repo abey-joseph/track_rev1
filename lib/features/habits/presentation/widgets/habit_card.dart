@@ -462,7 +462,7 @@ class _WeeksRow extends StatelessWidget {
   static int _isoWeekNumber(DateTime date) {
     // ISO 8601 week number
     final thursday = date.add(Duration(days: DateTime.thursday - date.weekday));
-    final jan1 = DateTime(thursday.year, 1);
+    final jan1 = DateTime(thursday.year);
     return ((thursday.difference(jan1).inDays) / 7).ceil() + 1;
   }
 

@@ -28,10 +28,9 @@ abstract class AuthRemoteDataSource {
 
 @LazySingleton(as: AuthRemoteDataSource)
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-  AuthRemoteDataSourceImpl(this._firebaseAuth, this._googleSignIn);
+  AuthRemoteDataSourceImpl(this._firebaseAuth);
 
   final firebase.FirebaseAuth _firebaseAuth;
-  final GoogleSignIn _googleSignIn;
 
   @override
   UserDto? get currentUser {
@@ -85,14 +84,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<UserDto> signInWithGoogle() async {
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        throw const ServerException(message: 'Google sign-in cancelled');
-      }
-
-      final googleAuth = await googleUser.authentication;
+      final googleUser = await GoogleSignIn.instance.authenticate();
+      final googleAuth = googleUser.authentication;
       final credential = firebase.GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
@@ -123,7 +117,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> signOut() async {
-    await Future.wait([_firebaseAuth.signOut(), _googleSignIn.signOut()]);
+    await Future.wait<void>([
+      _firebaseAuth.signOut(),
+      GoogleSignIn.instance.signOut(),
+    ]);
   }
 
   UserDto _mapFirebaseUser(firebase.User user) => UserDto(

@@ -136,7 +136,8 @@ class HabitFormBloc extends Bloc<HabitFormEvent, HabitFormState> {
       frequencyType: state.frequencyType,
       frequencyDays: state.frequencyDays,
       targetValue: state.targetValue,
-      targetType: state.targetValue > 1.0 ? state.targetType : HabitTargetType.min,
+      targetType:
+          state.targetValue > 1.0 ? state.targetType : HabitTargetType.min,
       targetUnit:
           state.targetUnit.trim().isEmpty ? null : state.targetUnit.trim(),
       reminderEnabled: state.reminderEnabled,

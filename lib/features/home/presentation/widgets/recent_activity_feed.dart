@@ -31,8 +31,8 @@ class RecentActivityFeed extends StatelessWidget {
             activity: activities[index],
             isLast: index == activities.length - 1,
             delay: Duration(
-              milliseconds: AnimationConstants.staggerDelay.inMilliseconds *
-                  index,
+              milliseconds:
+                  AnimationConstants.staggerDelay.inMilliseconds * index,
             ),
           );
         }),

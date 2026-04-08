@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make gen)",
+      "Bash(make gen-delete)",
+      "Bash(make format)",
+      "Bash(make analyze)",
+      "Bash(make test)",
+      "Bash(make get)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; if [[ \"$f\" == *.dart ]]; then DART=$(command -v dart 2>/dev/null || echo /Users/abeyjoseph/flutter/bin/dart); \"$DART\" format --line-length 80 \"$f\"; fi; } 2>/dev/null || true",
+            "timeout": 30,
+            "statusMessage": "Formatting Dart file..."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -37,6 +37,8 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: HabitStatsRoute.page, path: '/habit/:id/stats'),
 
     // Money detail routes
+    AutoRoute(page: AllTransactionsRoute.page),
+    AutoRoute(page: BookmarksRoute.page),
     AutoRoute(page: TransactionDetailRoute.page, path: '/transaction/:id'),
     CustomRoute<TransactionCreateEditRoute>(
       page: TransactionCreateEditRoute.page,
@@ -45,6 +47,17 @@ class AppRouter extends RootStackRouter {
     ),
     AutoRoute(page: AccountsRoute.page),
     AutoRoute(page: AccountDetailRoute.page, path: '/account/:id'),
+    CustomRoute<AccountCreateEditRoute>(
+      page: AccountCreateEditRoute.page,
+      fullscreenDialog: true,
+      transitionsBuilder: TransitionsBuilders.slideBottom,
+    ),
+    AutoRoute(page: CurrencyRoute.page),
+    CustomRoute<CurrencyCreateEditRoute>(
+      page: CurrencyCreateEditRoute.page,
+      fullscreenDialog: true,
+      transitionsBuilder: TransitionsBuilders.slideBottom,
+    ),
     AutoRoute(page: BudgetRoute.page),
     AutoRoute(page: BudgetDetailRoute.page, path: '/budget/:id'),
 

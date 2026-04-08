@@ -16,8 +16,7 @@ class GetHabitsWithDetails
   @override
   Future<Either<Failure, List<HabitWithDetails>>> call(
     GetHabitsParams params,
-  ) =>
-      _repository.getHabitsWithDetails(params.userId);
+  ) => _repository.getHabitsWithDetails(params.userId);
 }
 
 class GetHabitsParams extends Equatable {
