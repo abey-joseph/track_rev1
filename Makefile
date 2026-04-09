@@ -1,4 +1,4 @@
-.PHONY: get gen gen-watch gen-delete test analyze format format-check clean rebuild run-dev run-prod build-apk-dev build-apk-prod build-ios-dev build-ios-prod
+.PHONY: get gen gen-watch gen-delete test analyze format format-check clean rebuild run-dev run-prod run-mock build-apk-dev build-apk-prod build-ios-dev build-ios-prod test-mock
 
 ## Install dependencies
 get:
@@ -68,3 +68,11 @@ build-ios-dev:
 ## Build iOS for prod
 build-ios-prod:
 	flutter build ios --dart-define=ENV=prod --release
+
+## Run app in mock mode (separate DB with seeded test data)
+run-mock:
+	flutter run --dart-define=ENV=mock
+
+## Run mock database seeder tests
+test-mock:
+	flutter test test/mock_database/

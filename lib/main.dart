@@ -7,8 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:talker_bloc_logger/talker_bloc_logger.dart';
 import 'package:track/core/constants/app_constants.dart';
+import 'package:track/core/database/app_database.dart';
+import 'package:track/core/database/seeder/database_seeder.dart';
 import 'package:track/core/router/app_router.dart';
 import 'package:track/core/theme/app_theme.dart';
+import 'package:track/features/auth/domain/repositories/auth_repository.dart';
 import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:track/firebase_options.dart';
 import 'package:track/injection.dart';
@@ -16,12 +19,15 @@ import 'package:track/injection.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   const env = String.fromEnvironment(
     AppConstants.envKey,
     defaultValue: AppConstants.devEnv,
   );
+  AppEnvironment.current = env;
   await configureDependencies(env);
 
   // Setup Crashlytics
@@ -34,7 +40,29 @@ Future<void> main() async {
   // Setup BLoC observer with Talker
   Bloc.observer = TalkerBlocObserver(talker: getIt());
 
+  // In mock mode, seed the database after the first successful auth.
+  if (AppEnvironment.isMock) {
+    _seedOnFirstAuth();
+  }
+
   runApp(const TrackApp());
+}
+
+/// Listens for the first authenticated user and seeds mock data for
+/// that user's UID. Runs once and cancels the subscription.
+void _seedOnFirstAuth() {
+  final authRepo = getIt<AuthRepository>();
+  late final StreamSubscription<dynamic> sub;
+  sub = authRepo.authStateChanges.where((user) => user != null).take(1).listen((
+    user,
+  ) async {
+    final db = getIt<AppDatabase>();
+    final seeded = await DatabaseSeeder(db).seedIfNeeded(user!.uid);
+    if (seeded && kDebugMode) {
+      debugPrint('[MockSeeder] Seeded mock data for ${user.uid}');
+    }
+    await sub.cancel();
+  });
 }
 
 class TrackApp extends StatelessWidget {
