@@ -26,5 +26,11 @@ abstract class TransactionEntity with _$TransactionEntity {
 
     /// ID of the paired transaction row for transfers. Null otherwise.
     int? transferPeerId,
+
+    /// FK to the recurring rule that generated this transaction. Null for manual.
+    int? sourceRecurringTransactionId,
+
+    /// ISO-8601 date of the occurrence this transaction represents.
+    String? sourceOccurrenceDate,
   }) = _TransactionEntity;
 }

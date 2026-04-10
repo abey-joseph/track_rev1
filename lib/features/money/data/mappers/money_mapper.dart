@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:track/core/database/app_database.dart';
 import 'package:track/features/money/domain/entities/account_entity.dart';
 import 'package:track/features/money/domain/entities/budget_entity.dart';
 import 'package:track/features/money/domain/entities/category_entity.dart';
 import 'package:track/features/money/domain/entities/currency_entity.dart';
+import 'package:track/features/money/domain/entities/recurring_transaction_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_entity.dart';
 
 // ── Account ───────────────────────────────────────────────────────────────────
@@ -121,6 +124,8 @@ extension TransactionRowToEntity on Transaction {
     isBookmarked: isBookmarked,
     transactionDate: transactionDate,
     transferPeerId: transferPeerId,
+    sourceRecurringTransactionId: sourceRecurringTransactionId,
+    sourceOccurrenceDate: sourceOccurrenceDate,
     createdAt: createdAt,
     updatedAt: updatedAt,
   );
@@ -139,6 +144,8 @@ extension TransactionEntityToCompanion on TransactionEntity {
     isBookmarked: Value(isBookmarked),
     transactionDate: Value(transactionDate),
     transferPeerId: Value(transferPeerId),
+    sourceRecurringTransactionId: Value(sourceRecurringTransactionId),
+    sourceOccurrenceDate: Value(sourceOccurrenceDate),
     createdAt: Value(createdAt),
     updatedAt: Value(updatedAt),
   );
@@ -172,6 +179,69 @@ extension BudgetEntityToCompanion on BudgetEntity {
     createdAt: Value(createdAt),
     updatedAt: Value(updatedAt),
   );
+}
+
+// ── RecurringTransaction ─────────────────────────────────────────────────────
+
+extension RecurringTransactionRowToEntity on RecurringTransaction {
+  RecurringTransactionEntity toEntity() => RecurringTransactionEntity(
+    id: id,
+    userId: userId,
+    accountId: accountId,
+    categoryId: categoryId,
+    type: _parseTransactionType(type),
+    amountCents: amount,
+    title: title,
+    note: note,
+    scheduleType: _parseScheduleType(scheduleType),
+    startDate: startDate,
+    weekdays:
+        weekdaysJson != null
+            ? (jsonDecode(weekdaysJson!) as List).cast<int>()
+            : const [],
+    monthDay: monthDay,
+    monthDays:
+        monthDaysJson != null
+            ? (jsonDecode(monthDaysJson!) as List).cast<int>()
+            : const [],
+    timesPerMonth: timesPerMonth,
+    isActive: isActive,
+    isCompleted: isCompleted,
+    lastGeneratedDate: lastGeneratedDate,
+    completedAt: completedAt,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+  );
+}
+
+extension RecurringTransactionEntityToCompanion on RecurringTransactionEntity {
+  RecurringTransactionsCompanion toCompanion() =>
+      RecurringTransactionsCompanion(
+        id: id == 0 ? const Value.absent() : Value(id),
+        userId: Value(userId),
+        accountId: Value(accountId),
+        categoryId: Value(categoryId),
+        type: Value(_transactionTypeName(type)),
+        amount: Value(amountCents),
+        title: Value(title),
+        note: Value(note),
+        scheduleType: Value(_scheduleTypeName(scheduleType)),
+        startDate: Value(startDate),
+        weekdaysJson: Value(
+          weekdays.isEmpty ? null : jsonEncode(weekdays),
+        ),
+        monthDay: Value(monthDay),
+        monthDaysJson: Value(
+          monthDays.isEmpty ? null : jsonEncode(monthDays),
+        ),
+        timesPerMonth: Value(timesPerMonth),
+        isActive: Value(isActive),
+        isCompleted: Value(isCompleted),
+        lastGeneratedDate: Value(lastGeneratedDate),
+        completedAt: Value(completedAt),
+        createdAt: Value(createdAt),
+        updatedAt: Value(updatedAt),
+      );
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -224,4 +294,21 @@ BudgetPeriod _parseBudgetPeriod(String raw) => switch (raw) {
 String _budgetPeriodName(BudgetPeriod p) => switch (p) {
   BudgetPeriod.monthly => 'monthly',
   BudgetPeriod.weekly => 'weekly',
+};
+
+RecurringScheduleType _parseScheduleType(String raw) => switch (raw) {
+  'daily' => RecurringScheduleType.daily,
+  'weekly' => RecurringScheduleType.weekly,
+  'monthlyFixed' => RecurringScheduleType.monthlyFixed,
+  'monthlyMultiple' => RecurringScheduleType.monthlyMultiple,
+  'once' => RecurringScheduleType.once,
+  _ => RecurringScheduleType.daily,
+};
+
+String _scheduleTypeName(RecurringScheduleType t) => switch (t) {
+  RecurringScheduleType.daily => 'daily',
+  RecurringScheduleType.weekly => 'weekly',
+  RecurringScheduleType.monthlyFixed => 'monthlyFixed',
+  RecurringScheduleType.monthlyMultiple => 'monthlyMultiple',
+  RecurringScheduleType.once => 'once',
 };

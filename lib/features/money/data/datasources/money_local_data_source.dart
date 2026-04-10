@@ -67,6 +67,35 @@ abstract class MoneyLocalDataSource {
   Future<bool> isCurrencyInUse(String currencyCode, String userId);
 
   Future<void> ensureDefaultCurrencies(String userId);
+
+  // ── Recurring Transactions ──────────────────────────────────────────
+
+  Future<List<RecurringTransaction>> getRecurringTransactions(
+    String userId,
+  );
+
+  Stream<List<RecurringTransaction>> watchRecurringTransactions(
+    String userId,
+  );
+
+  Future<int> insertRecurringTransaction(
+    RecurringTransactionsCompanion entry,
+  );
+
+  Future<bool> updateRecurringTransaction(
+    RecurringTransactionsCompanion entry,
+  );
+
+  Future<int> deleteRecurringTransaction(int id);
+
+  Future<bool> hasGeneratedOccurrence(
+    int recurringId,
+    String occurrenceDate,
+  );
+
+  Future<void> markRecurringCompleted(int id, DateTime now);
+
+  Future<void> updateLastGeneratedDate(int id, String date, DateTime now);
 }
 
 @LazySingleton(as: MoneyLocalDataSource)
@@ -378,6 +407,98 @@ class MoneyLocalDataSourceImpl implements MoneyLocalDataSource {
           updatedAt: now,
         ),
       );
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  // ── Recurring Transactions ──────────────────────────────────────────
+
+  @override
+  Future<List<RecurringTransaction>> getRecurringTransactions(
+    String userId,
+  ) async {
+    try {
+      return await _db.moneyDao.getRecurringTransactions(userId);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Stream<List<RecurringTransaction>> watchRecurringTransactions(
+    String userId,
+  ) {
+    try {
+      return _db.moneyDao.watchRecurringTransactions(userId);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<int> insertRecurringTransaction(
+    RecurringTransactionsCompanion entry,
+  ) async {
+    try {
+      return await _db.moneyDao.insertRecurringTransaction(entry);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<bool> updateRecurringTransaction(
+    RecurringTransactionsCompanion entry,
+  ) async {
+    try {
+      return await _db.moneyDao.updateRecurringTransaction(entry);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<int> deleteRecurringTransaction(int id) async {
+    try {
+      return await _db.moneyDao.deleteRecurringTransaction(id);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<bool> hasGeneratedOccurrence(
+    int recurringId,
+    String occurrenceDate,
+  ) async {
+    try {
+      return await _db.moneyDao.hasGeneratedOccurrence(
+        recurringId,
+        occurrenceDate,
+      );
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> markRecurringCompleted(int id, DateTime now) async {
+    try {
+      await _db.moneyDao.markRecurringCompleted(id, now);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> updateLastGeneratedDate(
+    int id,
+    String date,
+    DateTime now,
+  ) async {
+    try {
+      await _db.moneyDao.updateLastGeneratedDate(id, date, now);
     } catch (e) {
       throw CacheException(message: e.toString());
     }

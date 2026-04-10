@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import 'package:track/core/database/tables/accounts_table.dart';
 import 'package:track/core/database/tables/categories_table.dart';
+import 'package:track/core/database/tables/recurring_transactions_table.dart';
 
 /// Income, expense, and transfer records.
 ///
@@ -28,6 +29,14 @@ class Transactions extends Table {
   IntColumn get transferPeerId =>
       integer().nullable().references(Transactions, #id)();
   BoolColumn get isBookmarked => boolean().withDefault(const Constant(false))();
+
+  /// FK to the recurring rule that generated this transaction. Null for manual.
+  IntColumn get sourceRecurringTransactionId =>
+      integer().nullable().references(RecurringTransactions, #id)();
+
+  /// ISO-8601 date of the occurrence this transaction represents.
+  TextColumn get sourceOccurrenceDate => text().nullable()();
+
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }

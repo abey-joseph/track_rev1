@@ -58,6 +58,12 @@ class AppRouter extends RootStackRouter {
       fullscreenDialog: true,
       transitionsBuilder: TransitionsBuilders.slideBottom,
     ),
+    AutoRoute(page: RecurringTransactionsRoute.page),
+    CustomRoute<RecurringTransactionCreateEditRoute>(
+      page: RecurringTransactionCreateEditRoute.page,
+      fullscreenDialog: true,
+      transitionsBuilder: TransitionsBuilders.slideBottom,
+    ),
     AutoRoute(page: BudgetRoute.page),
     AutoRoute(page: BudgetDetailRoute.page, path: '/budget/:id'),
 

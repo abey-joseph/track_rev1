@@ -4,6 +4,7 @@ import 'package:track/features/money/domain/entities/account_entity.dart';
 import 'package:track/features/money/domain/entities/category_entity.dart';
 import 'package:track/features/money/domain/entities/currency_entity.dart';
 import 'package:track/features/money/domain/entities/money_summary.dart';
+import 'package:track/features/money/domain/entities/recurring_transaction_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_with_details.dart';
 
@@ -76,4 +77,27 @@ abstract class MoneyRepository {
 
   /// Fails with a [CacheFailure] if the currency is in use by any account.
   Future<Either<Failure, void>> deleteCurrency(int id, String userId);
+
+  // ── Recurring Transactions ──────────────────────────────────────────
+
+  Future<Either<Failure, List<RecurringTransactionEntity>>>
+  getRecurringTransactions(String userId);
+
+  Stream<Either<Failure, List<RecurringTransactionEntity>>>
+  watchRecurringTransactions(String userId);
+
+  Future<Either<Failure, int>> createRecurringTransaction(
+    RecurringTransactionEntity entity,
+  );
+
+  Future<Either<Failure, void>> updateRecurringTransaction(
+    RecurringTransactionEntity entity,
+  );
+
+  Future<Either<Failure, void>> deleteRecurringTransaction(int id);
+
+  Future<Either<Failure, void>> processDueRecurringTransactions(
+    String userId,
+    DateTime now,
+  );
 }
