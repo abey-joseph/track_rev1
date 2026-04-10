@@ -136,35 +136,27 @@ class HabitsRepositoryImpl implements HabitsRepository {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
     final currentMonday = _mondayOfWeek(todayDate);
-
-    final logMap = <String, double>{};
-    for (final l in recentLogs) {
-      logMap[l.loggedDate] = l.value;
-    }
+    final isMaxType = habit.targetType == HabitTargetType.max;
+    final threshold = habit.targetValue;
 
     var completedWeeks = 0;
 
     for (var w = 0; w < 7; w++) {
       final weekMonday = currentMonday.subtract(Duration(days: w * 7));
-      var scheduledInWeek = 0;
-      var completedInWeek = 0;
+      final weekEnd = weekMonday.add(const Duration(days: 7));
 
-      for (var d = 0; d < 7; d++) {
-        final day = weekMonday.add(Duration(days: d));
-        if (habit.frequencyDays.contains(day.weekday)) {
-          scheduledInWeek++;
-          final iso = _formatIso(day);
-          final value = logMap[iso];
-          if (value != null &&
-              isHabitCompleted(value, habit.targetValue, habit.targetType)) {
-            completedInWeek++;
-          }
-        }
-      }
+      final weekLogs =
+          recentLogs.where((l) {
+            final date = DateTime.parse(l.loggedDate);
+            return !date.isBefore(weekMonday) && date.isBefore(weekEnd);
+          }).toList();
 
-      if (scheduledInWeek > 0 && completedInWeek >= scheduledInWeek) {
-        completedWeeks++;
-      }
+      if (weekLogs.isEmpty) continue;
+
+      final weekSum = weekLogs.fold<double>(0, (s, l) => s + l.value);
+      final isComplete =
+          isMaxType ? weekSum <= threshold : weekSum >= threshold;
+      if (isComplete) completedWeeks++;
     }
 
     return ((completedWeeks / 7) * 100).round();
