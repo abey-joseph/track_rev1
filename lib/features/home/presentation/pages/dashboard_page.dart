@@ -99,7 +99,9 @@ class _DashboardView extends StatelessWidget {
               final todayHabits =
                   state.habits
                       .where(
-                        (h) => h.habit.frequencyDays.contains(todayWeekday),
+                        (h) =>
+                            h.habit.frequencyType != HabitFrequency.weekly &&
+                            h.habit.frequencyDays.contains(todayWeekday),
                       )
                       .toList();
               final completed =
@@ -141,13 +143,17 @@ class _DashboardView extends StatelessWidget {
                 final prevToday =
                     prev.habits
                         .where(
-                          (h) => h.habit.frequencyDays.contains(todayWeekday),
+                          (h) =>
+                              h.habit.frequencyType != HabitFrequency.weekly &&
+                              h.habit.frequencyDays.contains(todayWeekday),
                         )
                         .toList();
                 final currToday =
                     curr.habits
                         .where(
-                          (h) => h.habit.frequencyDays.contains(todayWeekday),
+                          (h) =>
+                              h.habit.frequencyType != HabitFrequency.weekly &&
+                              h.habit.frequencyDays.contains(todayWeekday),
                         )
                         .toList();
                 return !listEquals(prevToday, currToday);
@@ -161,7 +167,9 @@ class _DashboardView extends StatelessWidget {
                 habitItems =
                     state.habits
                         .where(
-                          (h) => h.habit.frequencyDays.contains(todayWeekday),
+                          (h) =>
+                              h.habit.frequencyType != HabitFrequency.weekly &&
+                              h.habit.frequencyDays.contains(todayWeekday),
                         )
                         .map((h) {
                           final todayLog =

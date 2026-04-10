@@ -134,35 +134,28 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
       final lastCompletedDate = completedLogs.first.loggedDate;
 
       if (isWeekly) {
-        // Weekly streak: count consecutive completed weeks
-        final frequencyDays = _parseDays(
-          habit?.frequencyDays ?? '[1,2,3,4,5,6,7]',
-        );
-        final completedDates = completedLogs.map((l) => l.loggedDate).toSet();
-
+        // Weekly streak: count consecutive completed weeks.
+        // A week is complete when the sum of all log values in that week
+        // meets the target: sum >= threshold (min-type) or sum <= threshold
+        // (max-type, at least one log required).
         final todayDate = DateTime.parse(_todayIso());
         final currentMonday = _mondayOfWeek(todayDate);
 
-        // Check if a given week is fully completed
         bool isWeekCompleted(DateTime monday) {
-          var scheduled = 0;
-          var completed = 0;
-          for (var d = 0; d < 7; d++) {
-            final day = monday.add(Duration(days: d));
-            if (frequencyDays.contains(day.weekday)) {
-              scheduled++;
-              if (completedDates.contains(_formatIso(day))) {
-                completed++;
-              }
-            }
-          }
-          return scheduled > 0 && completed >= scheduled;
+          final weekEnd = monday.add(const Duration(days: 7));
+          final weekLogs =
+              allLogs.where((l) {
+                final d = DateTime.parse(l.loggedDate);
+                return !d.isBefore(monday) && d.isBefore(weekEnd);
+              }).toList();
+          if (weekLogs.isEmpty) return false;
+          final weekSum = weekLogs.fold<double>(0, (s, l) => s + l.value);
+          return isMaxType ? weekSum <= threshold : weekSum >= threshold;
         }
 
         // Current streak (from current or previous week backwards)
         current = 0;
         var weekCursor = currentMonday;
-        // Allow current week to not count if not yet completed
         if (!isWeekCompleted(weekCursor)) {
           weekCursor = weekCursor.subtract(const Duration(days: 7));
         }
@@ -171,7 +164,7 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
           weekCursor = weekCursor.subtract(const Duration(days: 7));
         }
 
-        // Longest streak: scan all weeks that have any logs
+        // Longest streak: scan all weeks from first to last log
         final allDates =
             allLogs.map((l) => DateTime.parse(l.loggedDate)).toList();
         if (allDates.isEmpty) {
@@ -194,14 +187,25 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
           }
         }
       } else {
-        // Daily streak calculation (unchanged logic)
+        // Daily / custom streak: walk backwards through scheduled days only,
+        // so unscheduled days (e.g. Wednesday skipped in a custom habit) do
+        // not break the streak.
+        final frequencyDays = _parseDays(
+          habit?.frequencyDays ?? '[1,2,3,4,5,6,7]',
+        );
         final sortedDates = completedLogs.map((l) => l.loggedDate).toList();
-        final today = _todayIso();
-        final yesterday = _offsetDayIso(-1);
+
+        // Start cursor from the most recent scheduled day (today or earlier).
+        final mostRecentScheduled = _todayOrPreviousScheduledIso(frequencyDays);
+        final oneBeforeThat = _previousScheduledDayIso(
+          mostRecentScheduled,
+          frequencyDays,
+        );
 
         current = 0;
         var cursor =
-            sortedDates.first == today || sortedDates.first == yesterday
+            sortedDates.first == mostRecentScheduled ||
+                    sortedDates.first == oneBeforeThat
                 ? sortedDates.first
                 : null;
 
@@ -209,7 +213,7 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
           for (final date in sortedDates) {
             if (date == cursor) {
               current++;
-              cursor = _previousDayIso(cursor!);
+              cursor = _previousScheduledDayIso(cursor!, frequencyDays);
             } else {
               break;
             }
@@ -220,7 +224,8 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
         var run = 0;
         String? prev;
         for (final date in sortedDates.reversed) {
-          if (prev == null || date == _nextDayIso(prev)) {
+          if (prev == null ||
+              date == _nextScheduledDayIso(prev, frequencyDays)) {
             run++;
             if (run > longest) longest = run;
           } else {
@@ -273,18 +278,37 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
     return _formatIso(now);
   }
 
-  String _offsetDayIso(int days) {
-    final d = DateTime.now().add(Duration(days: days));
+  /// Returns today if today is a scheduled day, otherwise walks backwards
+  /// to find the most recent scheduled day (max 7 steps).
+  String _todayOrPreviousScheduledIso(List<int> scheduledDays) {
+    var d = DateTime.now();
+    d = DateTime(d.year, d.month, d.day);
+    for (var i = 0; i < 7; i++) {
+      if (scheduledDays.contains(d.weekday)) return _formatIso(d);
+      d = d.subtract(const Duration(days: 1));
+    }
     return _formatIso(d);
   }
 
-  String _previousDayIso(String isoDate) {
-    final d = DateTime.parse(isoDate).subtract(const Duration(days: 1));
+  /// Walks backwards from [isoDate] (exclusive) to find the previous
+  /// scheduled day (max 7 steps).
+  String _previousScheduledDayIso(String isoDate, List<int> scheduledDays) {
+    var d = DateTime.parse(isoDate).subtract(const Duration(days: 1));
+    for (var i = 0; i < 7; i++) {
+      if (scheduledDays.contains(d.weekday)) return _formatIso(d);
+      d = d.subtract(const Duration(days: 1));
+    }
     return _formatIso(d);
   }
 
-  String _nextDayIso(String isoDate) {
-    final d = DateTime.parse(isoDate).add(const Duration(days: 1));
+  /// Walks forwards from [isoDate] (exclusive) to find the next
+  /// scheduled day (max 7 steps).
+  String _nextScheduledDayIso(String isoDate, List<int> scheduledDays) {
+    var d = DateTime.parse(isoDate).add(const Duration(days: 1));
+    for (var i = 0; i < 7; i++) {
+      if (scheduledDays.contains(d.weekday)) return _formatIso(d);
+      d = d.add(const Duration(days: 1));
+    }
     return _formatIso(d);
   }
 

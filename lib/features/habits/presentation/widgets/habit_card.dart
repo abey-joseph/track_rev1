@@ -326,11 +326,6 @@ class _DaysRow extends StatelessWidget {
       }),
     );
   }
-
-  String _formatIso(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-'
-      '${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
 }
 
 class _WeeksRow extends StatelessWidget {
@@ -346,7 +341,6 @@ class _WeeksRow extends StatelessWidget {
     final currentMonday = _mondayOfWeek(today);
 
     final habit = habitWithDetails.habit;
-    final scheduledDays = habit.frequencyDays.toSet();
 
     // Build a map of date -> log value for quick lookup
     final logMap = <String, double>{};
@@ -362,51 +356,68 @@ class _WeeksRow extends StatelessWidget {
         final isCurrentWeek = weekMonday == currentMonday;
         final weekNumber = _isoWeekNumber(weekMonday);
 
-        // Count scheduled and completed days in this week
-        var scheduledInWeek = 0;
-        var completedInWeek = 0;
+        // Sum all log values in this week (one-log-per-week model).
+        var weekSum = 0.0;
+        var hasAnyLog = false;
+        String? existingLogDate;
+        double? existingLogValue;
 
         for (var d = 0; d < 7; d++) {
           final day = weekMonday.add(Duration(days: d));
-          if (scheduledDays.contains(day.weekday)) {
-            scheduledInWeek++;
-            final iso = _formatIso(day);
-            final value = logMap[iso];
-            if (value != null &&
-                isHabitCompleted(value, habit.targetValue, habit.targetType)) {
-              completedInWeek++;
-            }
+          final iso = _formatIso(day);
+          final value = logMap[iso];
+          if (value != null) {
+            weekSum += value;
+            hasAnyLog = true;
+            existingLogDate ??= iso;
+            existingLogValue ??= value;
           }
         }
+
+        final isMaxType = habit.targetType == HabitTargetType.max;
 
         final DayStatus status;
         double? progress;
 
-        if (scheduledInWeek > 0 && completedInWeek >= scheduledInWeek) {
-          // All scheduled days completed → green
-          status = DayStatus.completed;
-        } else if (completedInWeek > 0 && scheduledInWeek > 0) {
-          // Some progress
-          if (habit.targetType == HabitTargetType.min) {
-            progress = completedInWeek / scheduledInWeek;
+        if (hasAnyLog) {
+          if (!isMaxType && weekSum >= habit.targetValue) {
+            status = DayStatus.completed;
+          } else if (isMaxType && weekSum <= habit.targetValue) {
+            status = DayStatus.completed;
+          } else if (isMaxType) {
+            // Exceeded the maximum → missed for past weeks, neutral for current
+            status = isCurrentWeek ? DayStatus.neutral : DayStatus.missed;
+          } else {
+            // Partial progress toward min target
+            status = DayStatus.neutral;
+            progress = (weekSum / habit.targetValue).clamp(0.0, 1.0);
           }
-          status = DayStatus.neutral;
-        } else if (!isCurrentWeek && scheduledInWeek > 0) {
-          // Past week with no completions → missed
+        } else if (!isCurrentWeek) {
           status = DayStatus.missed;
         } else {
-          // Current week with no completions, or no scheduled days
           status = DayStatus.neutral;
         }
 
-        // Tap on current week logs for today; past weeks are read-only
-        final VoidCallback? onTap;
-        if (isCurrentWeek && scheduledDays.contains(today.weekday)) {
-          final todayIso = _formatIso(today);
-          final todayLogValue = logMap[todayIso];
-          onTap = () async {
-            HapticFeedback.lightImpact();
+        // All 7 weeks are tappable (last 7 entries rule).
+        // Current week logs for today; past weeks use the existing log date
+        // if present, otherwise Monday of that week.
+        final tapDate =
+            isCurrentWeek
+                ? _formatIso(today)
+                : existingLogDate ?? _formatIso(weekMonday);
+        final tapCurrentValue =
+            isCurrentWeek ? logMap[tapDate] : existingLogValue;
+
+        return DayIndicator(
+          dayLabel: 'W$weekNumber',
+          dateLabel: '${weekMonday.day}/${weekMonday.month}',
+          status: status,
+          habitColor: habitColor,
+          progress: progress,
+          onTap: () async {
+            await HapticFeedback.lightImpact();
             if (habit.targetValue > 1.0) {
+              if (!context.mounted) return;
               final result = await showModalBottomSheet<MeasurableLogResult>(
                 context: context,
                 isScrollControlled: true,
@@ -416,40 +427,30 @@ class _WeeksRow extends StatelessWidget {
                       targetValue: habit.targetValue,
                       targetUnit: habit.targetUnit,
                       targetType: habit.targetType,
-                      currentValue: todayLogValue,
+                      currentValue: tapCurrentValue,
                     ),
               );
               if (result == null || !context.mounted) return;
               if (result.delete) {
                 context.read<HabitsBloc>().add(
-                  HabitsEvent.deleteLog(habitId: habit.id, date: todayIso),
+                  HabitsEvent.deleteLog(habitId: habit.id, date: tapDate),
                 );
               } else if (result.value != null) {
                 context.read<HabitsBloc>().add(
                   HabitsEvent.logValue(
                     habitId: habit.id,
-                    date: todayIso,
+                    date: tapDate,
                     value: result.value!,
                   ),
                 );
               }
             } else {
+              if (!context.mounted) return;
               context.read<HabitsBloc>().add(
-                HabitsEvent.toggleLog(habitId: habit.id, date: todayIso),
+                HabitsEvent.toggleLog(habitId: habit.id, date: tapDate),
               );
             }
-          };
-        } else {
-          onTap = null;
-        }
-
-        return DayIndicator(
-          dayLabel: 'W$weekNumber',
-          dateLabel: '${weekMonday.day}/${weekMonday.month}',
-          status: status,
-          habitColor: habitColor,
-          progress: progress,
-          onTap: onTap,
+          },
         );
       }),
     );
