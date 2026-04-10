@@ -313,6 +313,51 @@ class MoneyRepositoryImpl implements MoneyRepository {
     }
   }
 
+  @override
+  Stream<Either<Failure, List<CategoryEntity>>> watchCategories(
+    String userId,
+  ) {
+    return _localDataSource
+        .watchCategories(userId)
+        .map(
+          (categories) => Right<Failure, List<CategoryEntity>>(
+            categories.map((c) => c.toEntity()).toList(),
+          ),
+        );
+  }
+
+  @override
+  Future<Either<Failure, int>> createCategory(CategoryEntity category) async {
+    try {
+      final id = await _localDataSource.insertCategory(
+        category.toCompanion(),
+      );
+      return Right(id);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateCategory(CategoryEntity category) async {
+    try {
+      await _localDataSource.updateCategory(category.toCompanion());
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteCategory(int id) async {
+    try {
+      await _localDataSource.deleteCategory(id);
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
   // ── Currencies ────────────────────────────────────────────────────────────
 
   @override

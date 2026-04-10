@@ -84,3 +84,6 @@ class TrackApp extends StatelessWidget {
     );
   }
 }
+
+// run the below to avoid build runner issues
+//rm -rf .dart_tool/build && dart run build_runner build --delete-conflicting-outputs

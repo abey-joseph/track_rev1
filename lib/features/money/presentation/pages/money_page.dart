@@ -16,7 +16,13 @@ import 'package:track/features/money/presentation/widgets/money_overview_card.da
 import 'package:track/features/money/presentation/widgets/transaction_date_group.dart';
 import 'package:track/features/money/presentation/widgets/transaction_list_item.dart';
 
-enum _MoneyMenuOption { bookmarks, accounts, currencies, recurringTransactions }
+enum _MoneyMenuOption {
+  bookmarks,
+  accounts,
+  currencies,
+  recurringTransactions,
+  categories,
+}
 
 @RoutePage()
 class MoneyPage extends StatelessWidget {
@@ -59,6 +65,8 @@ class _MoneyView extends StatelessWidget {
                   context.router.push(const CurrencyRoute());
                 case _MoneyMenuOption.recurringTransactions:
                   context.router.push(const RecurringTransactionsRoute());
+                case _MoneyMenuOption.categories:
+                  context.router.push(const CategoriesRoute());
               }
             },
             itemBuilder:
@@ -92,6 +100,14 @@ class _MoneyView extends StatelessWidget {
                     child: ListTile(
                       leading: Icon(Icons.autorenew_rounded),
                       title: Text('Recurring'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: _MoneyMenuOption.categories,
+                    child: ListTile(
+                      leading: Icon(Icons.category_rounded),
+                      title: Text('Categories'),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),

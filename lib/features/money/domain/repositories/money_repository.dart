@@ -65,6 +65,14 @@ abstract class MoneyRepository {
 
   Future<Either<Failure, List<CategoryEntity>>> getCategories(String userId);
 
+  Stream<Either<Failure, List<CategoryEntity>>> watchCategories(String userId);
+
+  Future<Either<Failure, int>> createCategory(CategoryEntity category);
+
+  Future<Either<Failure, void>> updateCategory(CategoryEntity category);
+
+  Future<Either<Failure, void>> deleteCategory(int id);
+
   // ── Currencies ────────────────────────────────────────────────────────────
 
   Future<Either<Failure, List<CurrencyEntity>>> getCurrencies(String userId);

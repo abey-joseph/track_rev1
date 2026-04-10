@@ -48,7 +48,15 @@ abstract class MoneyLocalDataSource {
 
   Future<List<Category>> getCategories(String userId);
 
+  Stream<List<Category>> watchCategories(String userId);
+
   Future<Category?> getCategoryById(int id);
+
+  Future<int> insertCategory(CategoriesCompanion entry);
+
+  Future<bool> updateCategory(CategoriesCompanion entry);
+
+  Future<void> deleteCategory(int id);
 
   // ── Currencies ────────────────────────────────────────────────────────────
 
@@ -315,9 +323,45 @@ class MoneyLocalDataSourceImpl implements MoneyLocalDataSource {
   }
 
   @override
+  Stream<List<Category>> watchCategories(String userId) {
+    try {
+      return _db.moneyDao.watchCategories(userId);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
   Future<Category?> getCategoryById(int id) async {
     try {
       return await _db.moneyDao.getCategoryById(id);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<int> insertCategory(CategoriesCompanion entry) async {
+    try {
+      return await _db.moneyDao.insertCategory(entry);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<bool> updateCategory(CategoriesCompanion entry) async {
+    try {
+      return await _db.moneyDao.updateCategory(entry);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> deleteCategory(int id) async {
+    try {
+      await _db.moneyDao.deleteCategory(id);
     } catch (e) {
       throw CacheException(message: e.toString());
     }
