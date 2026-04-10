@@ -8,6 +8,7 @@ import 'package:track/features/money/domain/entities/account_entity.dart';
 import 'package:track/features/money/domain/entities/category_entity.dart';
 import 'package:track/features/money/domain/entities/currency_entity.dart';
 import 'package:track/features/money/domain/entities/money_summary.dart';
+import 'package:track/features/money/domain/entities/recurring_transaction_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_with_details.dart';
 import 'package:track/features/money/domain/repositories/money_repository.dart';
@@ -312,6 +313,51 @@ class MoneyRepositoryImpl implements MoneyRepository {
     }
   }
 
+  @override
+  Stream<Either<Failure, List<CategoryEntity>>> watchCategories(
+    String userId,
+  ) {
+    return _localDataSource
+        .watchCategories(userId)
+        .map(
+          (categories) => Right<Failure, List<CategoryEntity>>(
+            categories.map((c) => c.toEntity()).toList(),
+          ),
+        );
+  }
+
+  @override
+  Future<Either<Failure, int>> createCategory(CategoryEntity category) async {
+    try {
+      final id = await _localDataSource.insertCategory(
+        category.toCompanion(),
+      );
+      return Right(id);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateCategory(CategoryEntity category) async {
+    try {
+      await _localDataSource.updateCategory(category.toCompanion());
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteCategory(int id) async {
+    try {
+      await _localDataSource.deleteCategory(id);
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
   // ── Currencies ────────────────────────────────────────────────────────────
 
   @override
@@ -392,4 +438,284 @@ class MoneyRepositoryImpl implements MoneyRepository {
       return Left(Failure.cache(message: e.message));
     }
   }
+
+  // ── Recurring Transactions ──────────────────────────────────────────
+
+  @override
+  Future<Either<Failure, List<RecurringTransactionEntity>>>
+  getRecurringTransactions(String userId) async {
+    try {
+      final rows = await _localDataSource.getRecurringTransactions(userId);
+      return Right(rows.map((r) => r.toEntity()).toList());
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Stream<Either<Failure, List<RecurringTransactionEntity>>>
+  watchRecurringTransactions(String userId) {
+    return _localDataSource.watchRecurringTransactions(userId).map((
+      rows,
+    ) {
+      try {
+        return Right<Failure, List<RecurringTransactionEntity>>(
+          rows.map((r) => r.toEntity()).toList(),
+        );
+      } on CacheException catch (e) {
+        return Left<Failure, List<RecurringTransactionEntity>>(
+          Failure.cache(message: e.message),
+        );
+      }
+    });
+  }
+
+  @override
+  Future<Either<Failure, int>> createRecurringTransaction(
+    RecurringTransactionEntity entity,
+  ) async {
+    try {
+      final id = await _localDataSource.insertRecurringTransaction(
+        entity.toCompanion(),
+      );
+      return Right(id);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateRecurringTransaction(
+    RecurringTransactionEntity entity,
+  ) async {
+    try {
+      await _localDataSource.updateRecurringTransaction(
+        entity.toCompanion(),
+      );
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteRecurringTransaction(
+    int id,
+  ) async {
+    try {
+      await _localDataSource.deleteRecurringTransaction(id);
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> processDueRecurringTransactions(
+    String userId,
+    DateTime now,
+  ) async {
+    try {
+      final rows = await _localDataSource.getRecurringTransactions(userId);
+      final todayStr = _formatDate(now);
+
+      for (final row in rows) {
+        final entity = row.toEntity();
+        if (!entity.isActive) continue;
+
+        final datesToGenerate = _computeDueDates(entity, todayStr);
+        var lastDate = entity.lastGeneratedDate;
+
+        for (final dateStr in datesToGenerate) {
+          final exists = await _localDataSource.hasGeneratedOccurrence(
+            entity.id,
+            dateStr,
+          );
+          if (exists) continue;
+
+          final balanceDelta =
+              entity.type == TransactionType.income
+                  ? entity.amountCents
+                  : -entity.amountCents;
+
+          final txn = TransactionEntity(
+            id: 0,
+            userId: entity.userId,
+            accountId: entity.accountId,
+            categoryId: entity.categoryId,
+            type: entity.type,
+            amountCents: entity.amountCents,
+            title: entity.title,
+            note: entity.note,
+            transactionDate: dateStr,
+            sourceRecurringTransactionId: entity.id,
+            sourceOccurrenceDate: dateStr,
+            createdAt: now,
+            updatedAt: now,
+          );
+
+          await _localDataSource.insertTransaction(
+            txn.toCompanion(),
+            balanceDelta,
+          );
+
+          lastDate = dateStr;
+        }
+
+        if (lastDate != null && lastDate != entity.lastGeneratedDate) {
+          await _localDataSource.updateLastGeneratedDate(
+            entity.id,
+            lastDate,
+            now,
+          );
+        }
+
+        if (entity.scheduleType == RecurringScheduleType.once &&
+            datesToGenerate.isNotEmpty) {
+          await _localDataSource.markRecurringCompleted(
+            entity.id,
+            now,
+          );
+        }
+      }
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  /// Computes the list of ISO-8601 date strings that need transactions
+  /// generated for [entity] up through [todayStr].
+  List<String> _computeDueDates(
+    RecurringTransactionEntity entity,
+    String todayStr,
+  ) {
+    final startDate = DateTime.parse(entity.startDate);
+    final today = DateTime.parse(todayStr);
+
+    if (startDate.isAfter(today)) return [];
+
+    if (entity.scheduleType == RecurringScheduleType.once) {
+      if (entity.lastGeneratedDate != null) return [];
+      return [entity.startDate];
+    }
+
+    // Range: max(startDate, lastGeneratedDate + 1) .. today
+    DateTime rangeStart;
+    if (entity.lastGeneratedDate != null) {
+      final lastGen = DateTime.parse(entity.lastGeneratedDate!);
+      rangeStart = lastGen.add(const Duration(days: 1));
+    } else {
+      rangeStart = startDate;
+    }
+
+    if (rangeStart.isAfter(today)) return [];
+
+    final dates = <String>[];
+
+    switch (entity.scheduleType) {
+      case RecurringScheduleType.daily:
+        var d = rangeStart;
+        while (!d.isAfter(today)) {
+          dates.add(_formatDate(d));
+          d = d.add(const Duration(days: 1));
+        }
+      case RecurringScheduleType.weekly:
+        var d = rangeStart;
+        while (!d.isAfter(today)) {
+          if (entity.weekdays.contains(d.weekday)) {
+            dates.add(_formatDate(d));
+          }
+          d = d.add(const Duration(days: 1));
+        }
+      case RecurringScheduleType.monthlyFixed:
+        _addMonthlyFixedDates(
+          dates,
+          rangeStart,
+          today,
+          entity.monthDay ?? 1,
+        );
+      case RecurringScheduleType.monthlyMultiple:
+        _addMonthlyMultipleDates(
+          dates,
+          rangeStart,
+          today,
+          entity.monthDays,
+        );
+      case RecurringScheduleType.once:
+        break; // already handled above
+    }
+
+    return dates;
+  }
+
+  void _addMonthlyFixedDates(
+    List<String> dates,
+    DateTime rangeStart,
+    DateTime today,
+    int targetDay,
+  ) {
+    var year = rangeStart.year;
+    var month = rangeStart.month;
+
+    while (true) {
+      final lastDay = DateTime(year, month + 1, 0).day;
+      final resolvedDay = targetDay > lastDay ? lastDay : targetDay;
+      final candidate = DateTime(year, month, resolvedDay);
+
+      if (candidate.isAfter(today)) break;
+      if (!candidate.isBefore(rangeStart)) {
+        dates.add(_formatDate(candidate));
+      }
+
+      month++;
+      if (month > 12) {
+        month = 1;
+        year++;
+      }
+    }
+  }
+
+  void _addMonthlyMultipleDates(
+    List<String> dates,
+    DateTime rangeStart,
+    DateTime today,
+    List<int> targetDays,
+  ) {
+    var year = rangeStart.year;
+    var month = rangeStart.month;
+
+    while (true) {
+      final lastDay = DateTime(year, month + 1, 0).day;
+      final firstOfMonth = DateTime(year, month);
+
+      if (firstOfMonth.isAfter(today)) break;
+
+      // Resolve each target day, clamp to last day, collect unique.
+      final resolvedDays = <int>{};
+      for (final td in targetDays) {
+        resolvedDays.add(td > lastDay ? lastDay : td);
+      }
+
+      final sortedDays = resolvedDays.toList()..sort();
+      for (final day in sortedDays) {
+        final candidate = DateTime(year, month, day);
+        if (candidate.isAfter(today)) break;
+        if (!candidate.isBefore(rangeStart)) {
+          dates.add(_formatDate(candidate));
+        }
+      }
+
+      month++;
+      if (month > 12) {
+        month = 1;
+        year++;
+      }
+    }
+  }
+
+  static String _formatDate(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 }

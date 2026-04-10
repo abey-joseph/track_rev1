@@ -5,7 +5,14 @@ import 'package:track/core/database/app_database.dart';
 part 'money_dao.g.dart';
 
 @DriftAccessor(
-  tables: [Accounts, Categories, Transactions, Budgets, Currencies],
+  tables: [
+    Accounts,
+    Categories,
+    Transactions,
+    RecurringTransactions,
+    Budgets,
+    Currencies,
+  ],
 )
 class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
   MoneyDao(super.db);
@@ -296,6 +303,76 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
     );
     final rows = await query.get();
     return rows.isNotEmpty;
+  }
+
+  // ── Recurring Transactions ───────────────────────────────────────────────
+
+  Future<List<RecurringTransaction>> getRecurringTransactions(
+    String userId,
+  ) =>
+      (select(recurringTransactions)
+            ..where((r) => r.userId.equals(userId))
+            ..orderBy([(r) => OrderingTerm.desc(r.createdAt)]))
+          .get();
+
+  Stream<List<RecurringTransaction>> watchRecurringTransactions(
+    String userId,
+  ) =>
+      (select(recurringTransactions)
+            ..where((r) => r.userId.equals(userId))
+            ..orderBy([(r) => OrderingTerm.desc(r.createdAt)]))
+          .watch();
+
+  Future<int> insertRecurringTransaction(
+    RecurringTransactionsCompanion entry,
+  ) => into(recurringTransactions).insert(entry);
+
+  Future<bool> updateRecurringTransaction(
+    RecurringTransactionsCompanion entry,
+  ) => update(recurringTransactions).replace(entry);
+
+  Future<int> deleteRecurringTransaction(int id) =>
+      (delete(recurringTransactions)..where((r) => r.id.equals(id))).go();
+
+  /// Checks if a transaction has already been generated for this
+  /// recurring source + occurrence date.
+  Future<bool> hasGeneratedOccurrence(
+    int recurringId,
+    String occurrenceDate,
+  ) async {
+    final query = select(transactions)..where(
+      (t) =>
+          t.sourceRecurringTransactionId.equals(recurringId) &
+          t.sourceOccurrenceDate.equals(occurrenceDate),
+    );
+    final rows = await query.get();
+    return rows.isNotEmpty;
+  }
+
+  /// Marks a recurring transaction as completed.
+  Future<void> markRecurringCompleted(int id, DateTime now) async {
+    await (update(recurringTransactions)..where((r) => r.id.equals(id))).write(
+      RecurringTransactionsCompanion(
+        isActive: const Value(false),
+        isCompleted: const Value(true),
+        completedAt: Value(now),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
+  /// Updates the last generated date on a recurring rule.
+  Future<void> updateLastGeneratedDate(
+    int id,
+    String date,
+    DateTime now,
+  ) async {
+    await (update(recurringTransactions)..where((r) => r.id.equals(id))).write(
+      RecurringTransactionsCompanion(
+        lastGeneratedDate: Value(date),
+        updatedAt: Value(now),
+      ),
+    );
   }
 
   // ── Analytics ─────────────────────────────────────────────────────────────

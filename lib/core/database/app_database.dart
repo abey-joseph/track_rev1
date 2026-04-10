@@ -11,6 +11,7 @@ import 'package:track/core/database/tables/habit_logs_table.dart';
 import 'package:track/core/database/tables/habit_streaks_table.dart';
 import 'package:track/core/database/tables/habits_table.dart';
 import 'package:track/core/database/tables/insights_table.dart';
+import 'package:track/core/database/tables/recurring_transactions_table.dart';
 import 'package:track/core/database/tables/transactions_table.dart';
 import 'package:track/core/database/tables/user_settings_table.dart';
 
@@ -22,6 +23,7 @@ export 'tables/habit_logs_table.dart';
 export 'tables/habit_streaks_table.dart';
 export 'tables/habits_table.dart';
 export 'tables/insights_table.dart';
+export 'tables/recurring_transactions_table.dart';
 export 'tables/transactions_table.dart';
 export 'tables/user_settings_table.dart';
 
@@ -35,6 +37,7 @@ part 'app_database.g.dart';
     Accounts,
     Categories,
     Transactions,
+    RecurringTransactions,
     Budgets,
     Currencies,
     Insights,
@@ -46,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -67,6 +70,17 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 5) {
         await m.addColumn(transactions, transactions.isBookmarked);
+      }
+      if (from < 6) {
+        await m.createTable(recurringTransactions);
+        await m.addColumn(
+          transactions,
+          transactions.sourceRecurringTransactionId,
+        );
+        await m.addColumn(
+          transactions,
+          transactions.sourceOccurrenceDate,
+        );
       }
     },
   );

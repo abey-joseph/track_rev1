@@ -19,6 +19,14 @@ const _iconMap = <String, IconData>{
   'work': Icons.work,
   'trending_up': Icons.trending_up,
   'card_giftcard': Icons.card_giftcard,
+  'home': Icons.home,
+  'flight': Icons.flight,
+  'fitness_center': Icons.fitness_center,
+  'local_hospital': Icons.local_hospital,
+  'local_grocery_store': Icons.local_grocery_store,
+  'phone_android': Icons.phone_android,
+  'coffee': Icons.coffee,
+  'sports_esports': Icons.sports_esports,
 
   // Account icons
   'account_balance_wallet': Icons.account_balance_wallet,

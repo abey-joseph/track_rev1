@@ -5,6 +5,7 @@ import 'package:track/features/money/domain/entities/transaction_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_with_details.dart';
 import 'package:track/features/money/domain/usecases/get_monthly_summary.dart';
 import 'package:track/features/money/domain/usecases/get_transactions.dart';
+import 'package:track/features/money/domain/usecases/process_due_recurring_transactions.dart';
 import 'package:track/features/money/domain/usecases/watch_transactions.dart';
 import 'package:track/features/money/presentation/bloc/money_event.dart';
 import 'package:track/features/money/presentation/bloc/money_state.dart';
@@ -15,6 +16,7 @@ class MoneyBloc extends Bloc<MoneyEvent, MoneyState> {
     this._watchTransactions,
     this._getTransactions,
     this._getMonthlySummary,
+    this._processDueRecurringTransactions,
   ) : super(const MoneyState.initial()) {
     on<MoneyLoadRequested>(_onLoad);
     on<MoneyRefreshRequested>(_onRefresh);
@@ -23,6 +25,7 @@ class MoneyBloc extends Bloc<MoneyEvent, MoneyState> {
   final WatchTransactionsWithDetails _watchTransactions;
   final GetTransactionsWithDetails _getTransactions;
   final GetMonthlySummary _getMonthlySummary;
+  final ProcessDueRecurringTransactions _processDueRecurringTransactions;
   String? _currentUserId;
 
   Future<void> _onLoad(
@@ -33,6 +36,11 @@ class MoneyBloc extends Bloc<MoneyEvent, MoneyState> {
     emit(const MoneyState.loading());
 
     final now = DateTime.now();
+
+    // Process any due recurring transactions before loading.
+    await _processDueRecurringTransactions(
+      ProcessDueParams(userId: event.userId, now: now),
+    );
     final fromDate =
         '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-01';
     final lastDay = DateTime(now.year, now.month + 1, 0).day;

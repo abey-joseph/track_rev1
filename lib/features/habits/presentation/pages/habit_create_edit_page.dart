@@ -330,7 +330,7 @@ class _IconColorSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
-    final textTheme = context.textTheme;
+    //final textTheme = context.textTheme;
 
     return BlocBuilder<HabitFormBloc, HabitFormState>(
       buildWhen:
