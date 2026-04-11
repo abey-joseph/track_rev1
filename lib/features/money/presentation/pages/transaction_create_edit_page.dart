@@ -119,9 +119,7 @@ class _TransactionFormView extends StatelessWidget {
               SizedBox(height: 10),
               _TitleField(),
               SizedBox(height: 16),
-              _CategorySection(),
-              SizedBox(height: 16),
-              _AccountSection(),
+              _CategoryAccountRow(),
               SizedBox(height: 8),
               _ToAccountSection(),
               SizedBox(height: 16),
@@ -283,6 +281,7 @@ class _AmountField extends StatelessWidget {
                     ),
                     textAlign: TextAlign.end,
                     decoration: InputDecoration(
+                      fillColor: Colors.transparent,
                       hintText: '0.00',
                       hintStyle: textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.w700,
@@ -341,8 +340,8 @@ class _TitleField extends StatelessWidget {
   }
 }
 
-class _CategorySection extends StatelessWidget {
-  const _CategorySection();
+class _CategoryAccountRow extends StatelessWidget {
+  const _CategoryAccountRow();
 
   @override
   Widget build(BuildContext context) {
@@ -352,85 +351,193 @@ class _CategorySection extends StatelessWidget {
     return BlocSelector<
       TransactionFormBloc,
       TransactionFormState,
-      (List<CategoryEntity>, int?, CategoryEntity?)
+      (
+        TransactionType,
+        List<CategoryEntity>,
+        int?,
+        CategoryEntity?,
+        List<AccountEntity>,
+        int?,
+        AccountEntity?,
+      )
     >(
       selector: (state) {
-        final filtered = TransactionFormBloc.filteredCategories(state);
-        final selectedId = state.categoryId;
-        final selected =
-            selectedId != null
-                ? filtered.where((c) => c.id == selectedId).firstOrNull
+        final categories = TransactionFormBloc.filteredCategories(state);
+        final selectedCatId = state.categoryId;
+        final selectedCat =
+            selectedCatId != null
+                ? categories.where((c) => c.id == selectedCatId).firstOrNull
                 : null;
-        return (filtered, selectedId, selected);
+        final accounts = state.availableAccounts;
+        final selectedAccId = state.accountId;
+        final selectedAcc =
+            selectedAccId != null
+                ? accounts.where((a) => a.id == selectedAccId).firstOrNull
+                : null;
+        return (
+          state.type,
+          categories,
+          selectedCatId,
+          selectedCat,
+          accounts,
+          selectedAccId,
+          selectedAcc,
+        );
       },
       builder: (context, data) {
-        final (categories, selectedId, selectedCategory) = data;
+        final (
+          type,
+          categories,
+          selectedCatId,
+          selectedCat,
+          accounts,
+          selectedAccId,
+          selectedAcc,
+        ) = data;
+        final isTransfer = type == TransactionType.transfer;
 
-        // Hide category picker for transfers
-        if (categories.isEmpty && selectedCategory == null) {
-          return const SizedBox.shrink();
-        }
-
-        return GestureDetector(
-          onTap:
-              categories.isEmpty
-                  ? null
-                  : () {
+        return Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              // Category half — hidden for transfers
+              if (!isTransfer) ...[
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      FocusScope.of(context).unfocus();
+                      showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder:
+                            (_) => CategoryPickerSheet(
+                              categories: categories,
+                              selectedId: selectedCatId,
+                              onSelected:
+                                  (id) =>
+                                      context.read<TransactionFormBloc>().add(
+                                        TransactionFormEvent.categorySelected(
+                                          categoryId: id,
+                                        ),
+                                      ),
+                            ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.grid_view_rounded,
+                            size: 20,
+                            color:
+                                selectedCat != null
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurface.withValues(
+                                      alpha: 0.4,
+                                    ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child:
+                                selectedCat == null
+                                    ? Text(
+                                      'Category',
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.onSurface.withValues(
+                                          alpha: 0.4,
+                                        ),
+                                      ),
+                                    )
+                                    : _CategoryChip(category: selectedCat),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Vertical divider
+                Container(
+                  width: 1,
+                  height: 24,
+                  color: colorScheme.onSurface.withValues(alpha: 0.12),
+                ),
+              ],
+              // Account half
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
                     FocusScope.of(context).unfocus();
                     showModalBottomSheet<void>(
                       context: context,
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
                       builder:
-                          (_) => CategoryPickerSheet(
-                            categories: categories,
-                            selectedId: selectedId,
+                          (_) => AccountPickerSheet(
+                            accounts: accounts,
+                            selectedId: selectedAccId,
                             onSelected:
                                 (id) => context.read<TransactionFormBloc>().add(
-                                  TransactionFormEvent.categorySelected(
-                                    categoryId: id,
+                                  TransactionFormEvent.accountSelected(
+                                    accountId: id,
                                   ),
                                 ),
                           ),
                     );
                   },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.grid_view_rounded,
-                  size: 22,
-                  color:
-                      selectedCategory != null
-                          ? colorScheme.primary
-                          : colorScheme.onSurface.withValues(alpha: 0.4),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet_rounded,
+                          size: 20,
+                          color:
+                              selectedAcc != null
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurface.withValues(
+                                    alpha: 0.4,
+                                  ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child:
+                              selectedAcc == null
+                                  ? Text(
+                                    isTransfer ? 'From account' : 'Account',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onSurface.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                    ),
+                                  )
+                                  : _AccountChip(
+                                    account: selectedAcc,
+                                    prefix: isTransfer ? 'From: ' : null,
+                                  ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child:
-                      selectedCategory == null
-                          ? Text(
-                            'Select category',
-                            style: textTheme.bodyLarge?.copyWith(
-                              color: colorScheme.onSurface.withValues(
-                                alpha: 0.4,
-                              ),
-                            ),
-                          )
-                          : _CategoryChip(category: selectedCategory),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: colorScheme.onSurface.withValues(alpha: 0.3),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -462,115 +569,16 @@ class _CategoryChip extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          category.name,
-          style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+        Flexible(
+          child: Text(
+            category.name,
+            style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+            softWrap: false,
+            overflow: TextOverflow.fade,
+            maxLines: 1,
+          ),
         ),
       ],
-    );
-  }
-}
-
-class _AccountSection extends StatelessWidget {
-  const _AccountSection();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = context.colorScheme;
-    final textTheme = context.textTheme;
-
-    return BlocSelector<
-      TransactionFormBloc,
-      TransactionFormState,
-      (List<AccountEntity>, int?, AccountEntity?, bool)
-    >(
-      selector: (state) {
-        final accounts = List<AccountEntity>.from(state.availableAccounts);
-        final selectedId = state.accountId;
-        final selected =
-            selectedId != null
-                ? accounts.where((a) => a.id == selectedId).firstOrNull
-                : null;
-        return (
-          accounts,
-          selectedId,
-          selected,
-          state.type == TransactionType.transfer,
-        );
-      },
-      builder: (context, data) {
-        final (accounts, selectedId, selectedAccount, isTransfer) = data;
-
-        if (accounts.isEmpty) {
-          return Text(
-            'Loading accounts...',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          );
-        }
-
-        return GestureDetector(
-          onTap: () {
-            FocusScope.of(context).unfocus();
-            showModalBottomSheet<void>(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder:
-                  (_) => AccountPickerSheet(
-                    accounts: accounts,
-                    selectedId: selectedId,
-                    onSelected:
-                        (id) => context.read<TransactionFormBloc>().add(
-                          TransactionFormEvent.accountSelected(accountId: id),
-                        ),
-                  ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.account_balance_wallet_rounded,
-                  size: 22,
-                  color:
-                      selectedAccount != null
-                          ? colorScheme.primary
-                          : colorScheme.onSurface.withValues(alpha: 0.4),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child:
-                      selectedAccount == null
-                          ? Text(
-                            isTransfer ? 'From account' : 'Select account',
-                            style: textTheme.bodyLarge?.copyWith(
-                              color: colorScheme.onSurface.withValues(
-                                alpha: 0.4,
-                              ),
-                            ),
-                          )
-                          : _AccountChip(
-                            account: selectedAccount,
-                            prefix: isTransfer ? 'From: ' : null,
-                          ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: colorScheme.onSurface.withValues(alpha: 0.3),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }
@@ -607,9 +615,14 @@ class _AccountChip extends StatelessWidget {
               color: context.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
-        Text(
-          account.name,
-          style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+        Flexible(
+          child: Text(
+            account.name,
+            style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+            softWrap: false,
+            overflow: TextOverflow.fade,
+            maxLines: 1,
+          ),
         ),
       ],
     );

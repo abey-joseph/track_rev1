@@ -14,9 +14,8 @@ import 'package:track/features/money/presentation/bloc/recurring_transaction_for
 import 'package:track/features/money/presentation/bloc/recurring_transaction_form/recurring_transaction_form_event.dart';
 import 'package:track/features/money/presentation/bloc/recurring_transaction_form/recurring_transaction_form_state.dart';
 import 'package:track/features/money/presentation/utils/money_icon_resolver.dart';
-import 'package:track/features/money/presentation/widgets/account_picker_grid.dart';
 import 'package:track/features/money/presentation/widgets/account_picker_sheet.dart';
-import 'package:track/features/money/presentation/widgets/category_picker_grid.dart';
+import 'package:track/features/money/presentation/widgets/category_picker_sheet.dart';
 import 'package:track/features/money/presentation/widgets/transaction_type_toggle.dart';
 import 'package:track/injection.dart';
 
@@ -145,9 +144,7 @@ class _RecurringFormView extends StatelessWidget {
               SizedBox(height: 10),
               _TitleField(),
               SizedBox(height: 16),
-              _CategorySection(),
-              SizedBox(height: 16),
-              _AccountSection(),
+              _CategoryAccountRow(),
               SizedBox(height: 8),
               _ToAccountSection(),
               SizedBox(height: 16),
@@ -368,6 +365,7 @@ class _AmountInputState extends State<_AmountInput> {
       ),
       textAlign: TextAlign.end,
       decoration: InputDecoration(
+        fillColor: Colors.transparent,
         hintText: '0.00',
         hintStyle: textTheme.displaySmall?.copyWith(
           fontWeight: FontWeight.w700,
@@ -489,75 +487,210 @@ class _InitialValueFieldState extends State<_InitialValueField> {
   }
 }
 
-class _CategorySection extends StatelessWidget {
-  const _CategorySection();
+class _CategoryAccountRow extends StatelessWidget {
+  const _CategoryAccountRow();
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    final textTheme = context.textTheme;
+
     return BlocSelector<
       RecurringTransactionFormBloc,
       RecurringTransactionFormState,
-      (List<CategoryEntity>, int?, TransactionType)
+      (
+        TransactionType,
+        List<CategoryEntity>,
+        int?,
+        CategoryEntity?,
+        List<AccountEntity>,
+        int?,
+        AccountEntity?,
+      )
     >(
-      selector:
-          (state) => (
-            RecurringTransactionFormBloc.filteredCategories(state),
-            state.categoryId,
-            state.type,
-          ),
-      builder: (context, data) {
-        final (categories, selectedId, _) = data;
-        // Hide category section for transfers
-        if (categories.isEmpty) return const SizedBox.shrink();
-        return CategoryPickerGrid(
-          categories: categories,
-          selectedId: selectedId,
-          onSelected:
-              (id) => context.read<RecurringTransactionFormBloc>().add(
-                RecurringTransactionFormEvent.categorySelected(
-                  categoryId: id,
-                ),
-              ),
+      selector: (state) {
+        final categories = RecurringTransactionFormBloc.filteredCategories(
+          state,
+        );
+        final selectedCatId = state.categoryId;
+        final selectedCat =
+            selectedCatId != null
+                ? categories.where((c) => c.id == selectedCatId).firstOrNull
+                : null;
+        final accounts = state.availableAccounts;
+        final selectedAccId = state.accountId;
+        final selectedAcc =
+            selectedAccId != null
+                ? accounts.where((a) => a.id == selectedAccId).firstOrNull
+                : null;
+        return (
+          state.type,
+          categories,
+          selectedCatId,
+          selectedCat,
+          accounts,
+          selectedAccId,
+          selectedAcc,
         );
       },
-    );
-  }
-}
-
-class _AccountSection extends StatelessWidget {
-  const _AccountSection();
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = context.textTheme;
-    final colorScheme = context.colorScheme;
-
-    return BlocSelector<
-      RecurringTransactionFormBloc,
-      RecurringTransactionFormState,
-      (List<dynamic>, int?)
-    >(
-      selector: (state) => (state.availableAccounts, state.accountId),
       builder: (context, data) {
-        final accounts = data.$1;
-        final selectedId = data.$2;
-        if (accounts.isEmpty) {
-          return Text(
-            'Loading accounts...',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          );
-        }
-        return AccountPickerGrid(
-          accounts: accounts.cast(),
-          selectedId: selectedId,
-          onSelected:
-              (id) => context.read<RecurringTransactionFormBloc>().add(
-                RecurringTransactionFormEvent.accountSelected(
-                  accountId: id,
+        final (
+          type,
+          categories,
+          selectedCatId,
+          selectedCat,
+          accounts,
+          selectedAccId,
+          selectedAcc,
+        ) = data;
+        final isTransfer = type == TransactionType.transfer;
+
+        return Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              // Category half — hidden for transfers
+              if (!isTransfer) ...[
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      FocusScope.of(context).unfocus();
+                      showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder:
+                            (_) => CategoryPickerSheet(
+                              categories: categories,
+                              selectedId: selectedCatId,
+                              onSelected:
+                                  (id) => context
+                                      .read<RecurringTransactionFormBloc>()
+                                      .add(
+                                        RecurringTransactionFormEvent.categorySelected(
+                                          categoryId: id,
+                                        ),
+                                      ),
+                            ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.grid_view_rounded,
+                            size: 20,
+                            color:
+                                selectedCat != null
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurface.withValues(
+                                      alpha: 0.4,
+                                    ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child:
+                                selectedCat == null
+                                    ? Text(
+                                      'Category',
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.onSurface.withValues(
+                                          alpha: 0.4,
+                                        ),
+                                      ),
+                                    )
+                                    : _CategoryChip(category: selectedCat),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Vertical divider
+                Container(
+                  width: 1,
+                  height: 24,
+                  color: colorScheme.onSurface.withValues(alpha: 0.12),
+                ),
+              ],
+              // Account half
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder:
+                          (_) => AccountPickerSheet(
+                            accounts: accounts,
+                            selectedId: selectedAccId,
+                            onSelected:
+                                (id) => context
+                                    .read<RecurringTransactionFormBloc>()
+                                    .add(
+                                      RecurringTransactionFormEvent.accountSelected(
+                                        accountId: id,
+                                      ),
+                                    ),
+                          ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet_rounded,
+                          size: 20,
+                          color:
+                              selectedAcc != null
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurface.withValues(
+                                    alpha: 0.4,
+                                  ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child:
+                              selectedAcc == null
+                                  ? Text(
+                                    isTransfer ? 'From account' : 'Account',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onSurface.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                    ),
+                                  )
+                                  : _AccountChip(
+                                    account: selectedAcc,
+                                    prefix: isTransfer ? 'From: ' : null,
+                                  ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+            ],
+          ),
         );
       },
     );
@@ -661,10 +794,50 @@ class _ToAccountSection extends StatelessWidget {
   }
 }
 
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({required this.category});
+
+  final CategoryEntity category;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = context.textTheme;
+    final colorHex = category.colorHex.replaceFirst('#', '');
+    final color = Color(int.parse('FF$colorHex', radix: 16));
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          child: Icon(
+            resolveMoneyIcon(category.iconName),
+            size: 12,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            category.name,
+            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            softWrap: false,
+            overflow: TextOverflow.fade,
+            maxLines: 1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _AccountChip extends StatelessWidget {
-  const _AccountChip({required this.account});
+  const _AccountChip({required this.account, this.prefix});
 
   final AccountEntity account;
+  final String? prefix;
 
   @override
   Widget build(BuildContext context) {
@@ -676,19 +849,31 @@ class _AccountChip extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 28,
-          height: 28,
+          width: 22,
+          height: 22,
           decoration: BoxDecoration(shape: BoxShape.circle, color: color),
           child: Icon(
             resolveMoneyIcon(account.iconName),
-            size: 14,
+            size: 12,
             color: Colors.white,
           ),
         ),
-        const SizedBox(width: 8),
-        Text(
-          account.name,
-          style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+        const SizedBox(width: 6),
+        if (prefix != null)
+          Text(
+            prefix!,
+            style: textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
+        Flexible(
+          child: Text(
+            account.name,
+            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            softWrap: false,
+            overflow: TextOverflow.fade,
+            maxLines: 1,
+          ),
         ),
       ],
     );
