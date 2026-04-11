@@ -469,14 +469,14 @@ class _ActionButton extends StatelessWidget {
             children: [
               Icon(icon, color: Colors.white, size: 20),
               const SizedBox(height: 4),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              // Text(
+              //   label,
+              //   style: const TextStyle(
+              //     color: Colors.white,
+              //     fontSize: 10,
+              //     fontWeight: FontWeight.w600,
+              //   ),
+              // ),
             ],
           ),
         ),

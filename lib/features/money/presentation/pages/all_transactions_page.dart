@@ -795,37 +795,41 @@ class _DenseTransactionRow extends StatelessWidget {
           const SizedBox(width: 10),
           // Title
           Expanded(
-            flex: 3,
+            flex: 4,
             child: Text(
               txn.title,
               style: textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.fade,
             ),
           ),
           const SizedBox(width: 8),
           // Category
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Text(
               transaction.categoryName,
               style: textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.55),
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.fade,
             ),
           ),
           const SizedBox(width: 8),
           // Amount
-          Text(
-            '${isIncome ? '+' : '-'}${formatCurrency(txn.amountCents)}',
-            style: textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: amountColor,
-              fontFeatures: const [FontFeature.tabularFigures()],
+          Expanded(
+            flex: 3,
+            child: Text(
+              '${isIncome ? '+' : '-'}${formatCurrency(txn.amountCents)}',
+              style: textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: amountColor,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+              textAlign: TextAlign.end,
             ),
           ),
         ],
@@ -989,14 +993,14 @@ class _ActionButton extends StatelessWidget {
             children: [
               Icon(icon, color: Colors.white, size: 20),
               const SizedBox(height: 4),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              // Text(
+              //   label,
+              //   style: const TextStyle(
+              //     color: Colors.white,
+              //     fontSize: 10,
+              //     fontWeight: FontWeight.w600,
+              //   ),
+              // ),
             ],
           ),
         ),

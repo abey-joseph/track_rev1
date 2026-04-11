@@ -290,6 +290,7 @@ class _RecurringTransactionCard extends StatelessWidget {
                             alpha: 0.6,
                           ),
                         ),
+                        overflow: TextOverflow.fade,
                       ),
                     ),
                     Text(

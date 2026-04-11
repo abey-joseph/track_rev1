@@ -306,7 +306,7 @@ class _TypeSelector extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            //crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 'Type',
