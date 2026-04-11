@@ -32,9 +32,10 @@ class MoneyRepositoryImpl implements MoneyRepository {
         .watchTransactions(userId, fromDate: fromDate, toDate: toDate)
         .asyncMap((transactions) async {
           try {
-            final results = await Future.wait(
+            final enriched = await Future.wait(
               transactions.map((t) => _enrichTransaction(t.toEntity())),
             );
+            final results = _deduplicateTransfers(enriched);
             return Right<Failure, List<TransactionWithDetails>>(results);
           } on CacheException catch (e) {
             return Left<Failure, List<TransactionWithDetails>>(
@@ -57,10 +58,10 @@ class MoneyRepositoryImpl implements MoneyRepository {
         fromDate: fromDate,
         toDate: toDate,
       );
-      final results = await Future.wait(
+      final enriched = await Future.wait(
         transactions.map((t) => _enrichTransaction(t.toEntity())),
       );
-      return Right(results);
+      return Right(_deduplicateTransfers(enriched));
     } on CacheException catch (e) {
       return Left(Failure.cache(message: e.message));
     }
@@ -72,12 +73,41 @@ class MoneyRepositoryImpl implements MoneyRepository {
     final category = await _localDataSource.getCategoryById(entity.categoryId);
     final account = await _localDataSource.getAccountById(entity.accountId);
 
+    // Resolve currency symbol from the original currency code
+    final currencyCode = entity.originalCurrencyCode;
+    var currencySymbol = r'$';
+    final currencyRow = await _localDataSource.getCurrencyByCode(
+      entity.originalCurrencyCode,
+      entity.userId,
+    );
+    if (currencyRow != null) {
+      currencySymbol = currencyRow.toEntity().symbol;
+    }
+
+    // For transfers, look up the to-account name via the peer row
+    String? toAccountName;
+    if (entity.type == TransactionType.transfer &&
+        entity.transferPeerId != null) {
+      final peer = await _localDataSource.getTransactionById(
+        entity.transferPeerId!,
+      );
+      if (peer != null) {
+        final toAccount = await _localDataSource.getAccountById(
+          peer.toEntity().accountId,
+        );
+        toAccountName = toAccount?.name;
+      }
+    }
+
     return TransactionWithDetails(
       transaction: entity,
       categoryName: category?.name ?? 'Unknown',
       categoryIconName: category?.iconName ?? 'more_horiz',
       categoryColorHex: category?.colorHex ?? '#795548',
       accountName: account?.name ?? 'Unknown',
+      currencyCode: currencyCode,
+      currencySymbol: currencySymbol,
+      toAccountName: toAccountName,
     );
   }
 
@@ -153,15 +183,37 @@ class MoneyRepositoryImpl implements MoneyRepository {
     TransactionEntity transaction,
   ) async {
     try {
-      final balanceDelta =
-          transaction.type == TransactionType.income
-              ? transaction.amountCents
-              : -transaction.amountCents;
-      await _localDataSource.deleteTransaction(
-        transaction.id,
-        transaction.accountId,
-        balanceDelta,
-      );
+      if (transaction.type == TransactionType.transfer &&
+          transaction.transferPeerId != null) {
+        final peer = await _localDataSource.getTransactionById(
+          transaction.transferPeerId!,
+        );
+        if (peer != null) {
+          await _localDataSource.deleteTransferPair(
+            transaction.id,
+            peer.id,
+            transaction.accountId,
+            peer.accountId,
+            transaction.amountCents,
+          );
+        } else {
+          await _localDataSource.deleteTransaction(
+            transaction.id,
+            transaction.accountId,
+            -transaction.amountCents,
+          );
+        }
+      } else {
+        final balanceDelta =
+            transaction.type == TransactionType.income
+                ? transaction.amountCents
+                : -transaction.amountCents;
+        await _localDataSource.deleteTransaction(
+          transaction.id,
+          transaction.accountId,
+          balanceDelta,
+        );
+      }
       return const Right(null);
     } on CacheException catch (e) {
       return Left(Failure.cache(message: e.message));
@@ -210,14 +262,96 @@ class MoneyRepositoryImpl implements MoneyRepository {
     TransactionEntity transaction,
   ) async {
     try {
+      final originalCents =
+          transaction.originalAmountCents > 0
+              ? transaction.originalAmountCents
+              : transaction.amountCents;
+      final amountCents = await _convertToAccountCurrency(
+        transaction.userId,
+        transaction.accountId,
+        transaction.originalCurrencyCode,
+        originalCents,
+      );
+      final converted = transaction.copyWith(amountCents: amountCents);
       final balanceDelta =
-          transaction.type == TransactionType.income
-              ? transaction.amountCents
-              : -transaction.amountCents;
+          converted.type == TransactionType.income ? amountCents : -amountCents;
 
       final id = await _localDataSource.insertTransaction(
-        transaction.toCompanion(),
+        converted.toCompanion(),
         balanceDelta,
+      );
+      return Right(id);
+    } on CacheException catch (e) {
+      return Left(Failure.cache(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, int>> createTransfer({
+    required TransactionEntity fromTransaction,
+    required int toAccountId,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final categoryId =
+          await _findTransferCategoryId(fromTransaction.userId) ??
+          fromTransaction.categoryId;
+
+      final originalCents =
+          fromTransaction.originalAmountCents > 0
+              ? fromTransaction.originalAmountCents
+              : fromTransaction.amountCents;
+
+      final fromAmountCents = await _convertToAccountCurrency(
+        fromTransaction.userId,
+        fromTransaction.accountId,
+        fromTransaction.originalCurrencyCode,
+        originalCents,
+      );
+      final toAmountCents = await _convertToAccountCurrency(
+        fromTransaction.userId,
+        toAccountId,
+        fromTransaction.originalCurrencyCode,
+        originalCents,
+      );
+
+      final fromEntry =
+          fromTransaction
+              .copyWith(
+                categoryId: categoryId,
+                amountCents: fromAmountCents,
+                originalAmountCents: originalCents,
+                createdAt: now,
+                updatedAt: now,
+              )
+              .toCompanion();
+
+      final toEntry =
+          TransactionEntity(
+            id: 0,
+            userId: fromTransaction.userId,
+            accountId: toAccountId,
+            categoryId: categoryId,
+            type: TransactionType.transfer,
+            amountCents: toAmountCents,
+            originalCurrencyCode: fromTransaction.originalCurrencyCode,
+            originalAmountCents: originalCents,
+            title: fromTransaction.title,
+            note: fromTransaction.note,
+            transactionDate: fromTransaction.transactionDate,
+            sourceRecurringTransactionId:
+                fromTransaction.sourceRecurringTransactionId,
+            sourceOccurrenceDate: fromTransaction.sourceOccurrenceDate,
+            createdAt: now,
+            updatedAt: now,
+          ).toCompanion();
+
+      final id = await _localDataSource.insertTransferPair(
+        fromEntry,
+        toEntry,
+        fromTransaction.accountId,
+        toAccountId,
+        fromAmountCents,
       );
       return Right(id);
     } on CacheException catch (e) {
@@ -533,31 +667,110 @@ class MoneyRepositoryImpl implements MoneyRepository {
           );
           if (exists) continue;
 
-          final balanceDelta =
-              entity.type == TransactionType.income
-                  ? entity.amountCents
-                  : -entity.amountCents;
+          final originalCents =
+              entity.originalAmountCents > 0
+                  ? entity.originalAmountCents
+                  : entity.amountCents;
 
-          final txn = TransactionEntity(
-            id: 0,
-            userId: entity.userId,
-            accountId: entity.accountId,
-            categoryId: entity.categoryId,
-            type: entity.type,
-            amountCents: entity.amountCents,
-            title: entity.title,
-            note: entity.note,
-            transactionDate: dateStr,
-            sourceRecurringTransactionId: entity.id,
-            sourceOccurrenceDate: dateStr,
-            createdAt: now,
-            updatedAt: now,
-          );
+          if (entity.type == TransactionType.transfer &&
+              entity.toAccountId != null) {
+            final categoryId =
+                await _findTransferCategoryId(entity.userId) ??
+                entity.categoryId;
 
-          await _localDataSource.insertTransaction(
-            txn.toCompanion(),
-            balanceDelta,
-          );
+            final fromAmountCents = await _convertToAccountCurrency(
+              entity.userId,
+              entity.accountId,
+              entity.originalCurrencyCode,
+              originalCents,
+            );
+            final toAmountCents = await _convertToAccountCurrency(
+              entity.userId,
+              entity.toAccountId!,
+              entity.originalCurrencyCode,
+              originalCents,
+            );
+
+            final fromEntry =
+                TransactionEntity(
+                  id: 0,
+                  userId: entity.userId,
+                  accountId: entity.accountId,
+                  categoryId: categoryId,
+                  type: TransactionType.transfer,
+                  amountCents: fromAmountCents,
+                  originalCurrencyCode: entity.originalCurrencyCode,
+                  originalAmountCents: originalCents,
+                  title: entity.title,
+                  note: entity.note,
+                  transactionDate: dateStr,
+                  sourceRecurringTransactionId: entity.id,
+                  sourceOccurrenceDate: dateStr,
+                  createdAt: now,
+                  updatedAt: now,
+                ).toCompanion();
+
+            final toEntry =
+                TransactionEntity(
+                  id: 0,
+                  userId: entity.userId,
+                  accountId: entity.toAccountId!,
+                  categoryId: categoryId,
+                  type: TransactionType.transfer,
+                  amountCents: toAmountCents,
+                  originalCurrencyCode: entity.originalCurrencyCode,
+                  originalAmountCents: originalCents,
+                  title: entity.title,
+                  note: entity.note,
+                  transactionDate: dateStr,
+                  sourceRecurringTransactionId: entity.id,
+                  sourceOccurrenceDate: dateStr,
+                  createdAt: now,
+                  updatedAt: now,
+                ).toCompanion();
+
+            await _localDataSource.insertTransferPair(
+              fromEntry,
+              toEntry,
+              entity.accountId,
+              entity.toAccountId!,
+              fromAmountCents,
+            );
+          } else {
+            final amountCents = await _convertToAccountCurrency(
+              entity.userId,
+              entity.accountId,
+              entity.originalCurrencyCode,
+              originalCents,
+            );
+            final balanceDelta =
+                entity.type == TransactionType.income
+                    ? amountCents
+                    : -amountCents;
+
+            final txn = TransactionEntity(
+              id: 0,
+              userId: entity.userId,
+              accountId: entity.accountId,
+              categoryId: entity.categoryId,
+              type: entity.type,
+              amountCents: amountCents,
+              originalCurrencyCode: entity.originalCurrencyCode,
+              originalAmountCents: originalCents,
+              title: entity.title,
+              note: entity.note,
+              transactionDate: dateStr,
+              sourceRecurringTransactionId: entity.id,
+              sourceOccurrenceDate: dateStr,
+              createdAt: now,
+              updatedAt: now,
+            );
+
+            await _localDataSource.insertTransaction(
+              txn.toCompanion(),
+              balanceDelta,
+            );
+          }
 
           lastDate = dateStr;
         }
@@ -712,6 +925,55 @@ class MoneyRepositoryImpl implements MoneyRepository {
         year++;
       }
     }
+  }
+
+  /// Filters out the "to" side of transfer pairs to avoid duplicates in lists.
+  List<TransactionWithDetails> _deduplicateTransfers(
+    List<TransactionWithDetails> items,
+  ) {
+    return items.where((d) {
+      final t = d.transaction;
+      if (t.type == TransactionType.transfer && t.transferPeerId != null) {
+        return t.id < t.transferPeerId!;
+      }
+      return true;
+    }).toList();
+  }
+
+  /// Converts [originalAmountCents] in [originalCurrencyCode] to the account's
+  /// base currency. Returns [originalAmountCents] unchanged if currencies match
+  /// or rate data is unavailable.
+  Future<int> _convertToAccountCurrency(
+    String userId,
+    int accountId,
+    String originalCurrencyCode,
+    int originalAmountCents,
+  ) async {
+    final account = await _localDataSource.getAccountById(accountId);
+    if (account == null || account.currency == originalCurrencyCode) {
+      return originalAmountCents;
+    }
+    final origCurrencyRow = await _localDataSource.getCurrencyByCode(
+      originalCurrencyCode,
+      userId,
+    );
+    final acctCurrencyRow = await _localDataSource.getCurrencyByCode(
+      account.currency,
+      userId,
+    );
+    final origRate = origCurrencyRow?.exchangeRate ?? 1.0;
+    final acctRate = acctCurrencyRow?.exchangeRate ?? 1.0;
+    final safeOrigRate = origRate <= 0 ? 1.0 : origRate;
+    return (originalAmountCents * acctRate / safeOrigRate).round();
+  }
+
+  /// Returns the ID of the seeded "Transfer" category, or null if not found.
+  Future<int?> _findTransferCategoryId(String userId) async {
+    final categories = await _localDataSource.getCategories(userId);
+    for (final c in categories) {
+      if (c.transactionType == 'transfer' && c.isDefault) return c.id;
+    }
+    return null;
   }
 
   static String _formatDate(DateTime d) =>

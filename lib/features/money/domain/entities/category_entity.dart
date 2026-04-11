@@ -2,7 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'category_entity.freezed.dart';
 
-enum CategoryTransactionType { income, expense, both }
+enum CategoryTransactionType { income, expense, both, transfer }
 
 @freezed
 abstract class CategoryEntity with _$CategoryEntity {

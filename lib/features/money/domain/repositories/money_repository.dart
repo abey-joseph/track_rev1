@@ -33,6 +33,12 @@ abstract class MoneyRepository {
 
   Future<Either<Failure, int>> createTransaction(TransactionEntity transaction);
 
+  /// Creates a transfer pair atomically. Returns the ID of the "from" row.
+  Future<Either<Failure, int>> createTransfer({
+    required TransactionEntity fromTransaction,
+    required int toAccountId,
+  });
+
   Future<Either<Failure, void>> deleteTransaction(
     TransactionEntity transaction,
   );

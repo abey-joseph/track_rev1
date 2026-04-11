@@ -7,6 +7,7 @@ import 'package:track/features/money/domain/usecases/create_recurring_transactio
 import 'package:track/features/money/domain/usecases/get_accounts.dart';
 import 'package:track/features/money/domain/usecases/get_categories.dart';
 import 'package:track/features/money/domain/usecases/update_recurring_transaction.dart';
+import 'package:track/features/money/domain/usecases/watch_currencies.dart';
 import 'package:track/features/money/presentation/bloc/recurring_transaction_form/recurring_transaction_form_event.dart';
 import 'package:track/features/money/presentation/bloc/recurring_transaction_form/recurring_transaction_form_state.dart';
 
@@ -18,6 +19,7 @@ class RecurringTransactionFormBloc
     this._updateRecurringTransaction,
     this._getAccounts,
     this._getCategories,
+    this._watchCurrencies,
   ) : super(const RecurringTransactionFormState()) {
     on<RecurringTransactionFormInitialized>(_onInitialized);
     on<RecurringTransactionFormTypeChanged>(_onTypeChanged);
@@ -25,6 +27,8 @@ class RecurringTransactionFormBloc
     on<RecurringTransactionFormTitleChanged>(_onTitleChanged);
     on<RecurringTransactionFormCategorySelected>(_onCategorySelected);
     on<RecurringTransactionFormAccountSelected>(_onAccountSelected);
+    on<RecurringTransactionFormToAccountSelected>(_onToAccountSelected);
+    on<RecurringTransactionFormCurrencySelected>(_onCurrencySelected);
     on<RecurringTransactionFormNoteChanged>(_onNoteChanged);
     on<RecurringTransactionFormScheduleTypeChanged>(
       _onScheduleTypeChanged,
@@ -43,32 +47,46 @@ class RecurringTransactionFormBloc
   final UpdateRecurringTransaction _updateRecurringTransaction;
   final GetAccounts _getAccounts;
   final GetCategories _getCategories;
+  final WatchCurrencies _watchCurrencies;
 
   Future<void> _onInitialized(
     RecurringTransactionFormInitialized event,
     Emitter<RecurringTransactionFormState> emit,
   ) async {
-    final accountsResult = await _getAccounts(
-      UserIdParams(userId: event.userId),
-    );
-    final categoriesResult = await _getCategories(
-      UserIdParams(userId: event.userId),
-    );
+    final params = UserIdParams(userId: event.userId);
+    final accountsResult = await _getAccounts(params);
+    final categoriesResult = await _getCategories(params);
+    final currenciesResult = await _watchCurrencies(params).first;
 
     final accounts = accountsResult.getOrElse((_) => []);
     final categories = categoriesResult.getOrElse((_) => []);
+    final currencies = currenciesResult.getOrElse((_) => []);
+
+    final defaultCurrencyCode =
+        currencies.isNotEmpty
+            ? currencies
+                .firstWhere(
+                  (c) => c.isDefault,
+                  orElse: () => currencies.first,
+                )
+                .code
+            : 'USD';
 
     if (event.existing != null) {
       final e = event.existing!;
+      final displayAmount =
+          e.originalAmountCents > 0 ? e.originalAmountCents : e.amountCents;
       emit(
         state.copyWith(
           type: e.type,
-          amount: (e.amountCents / 100).toStringAsFixed(
-            e.amountCents % 100 == 0 ? 0 : 2,
+          amount: (displayAmount / 100).toStringAsFixed(
+            displayAmount % 100 == 0 ? 0 : 2,
           ),
           title: e.title,
           categoryId: e.categoryId,
           accountId: e.accountId,
+          toAccountId: e.toAccountId,
+          selectedCurrencyCode: e.originalCurrencyCode,
           note: e.note ?? '',
           scheduleType: e.scheduleType,
           startDate: DateTime.parse(e.startDate),
@@ -78,6 +96,7 @@ class RecurringTransactionFormBloc
           timesPerMonth: e.timesPerMonth,
           allCategories: categories,
           availableAccounts: accounts,
+          availableCurrencies: currencies,
           isEditMode: true,
           existingId: e.id,
           existingIsCompleted: e.isCompleted,
@@ -88,7 +107,9 @@ class RecurringTransactionFormBloc
         state.copyWith(
           availableAccounts: accounts,
           allCategories: categories,
+          availableCurrencies: currencies,
           accountId: accounts.isNotEmpty ? accounts.first.id : null,
+          selectedCurrencyCode: defaultCurrencyCode,
           startDate: DateTime.now(),
         ),
       );
@@ -103,6 +124,7 @@ class RecurringTransactionFormBloc
       state.copyWith(
         type: event.type,
         categoryId: null,
+        toAccountId: null,
         errorMessage: null,
       ),
     );
@@ -138,9 +160,40 @@ class RecurringTransactionFormBloc
     RecurringTransactionFormAccountSelected event,
     Emitter<RecurringTransactionFormState> emit,
   ) {
+    final account =
+        state.availableAccounts
+            .where((a) => a.id == event.accountId)
+            .firstOrNull;
+    final matchingCurrency =
+        account != null
+            ? state.availableCurrencies
+                .where((c) => c.code == account.currency)
+                .firstOrNull
+            : null;
     emit(
       state.copyWith(
         accountId: event.accountId,
+        selectedCurrencyCode:
+            matchingCurrency?.code ?? state.selectedCurrencyCode,
+        errorMessage: null,
+      ),
+    );
+  }
+
+  void _onToAccountSelected(
+    RecurringTransactionFormToAccountSelected event,
+    Emitter<RecurringTransactionFormState> emit,
+  ) {
+    emit(state.copyWith(toAccountId: event.accountId, errorMessage: null));
+  }
+
+  void _onCurrencySelected(
+    RecurringTransactionFormCurrencySelected event,
+    Emitter<RecurringTransactionFormState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        selectedCurrencyCode: event.currencyCode,
         errorMessage: null,
       ),
     );
@@ -219,7 +272,7 @@ class RecurringTransactionFormBloc
       emit(state.copyWith(errorMessage: 'Please enter a title'));
       return;
     }
-    if (state.categoryId == null) {
+    if (state.type != TransactionType.transfer && state.categoryId == null) {
       emit(
         state.copyWith(errorMessage: 'Please select a category'),
       );
@@ -230,6 +283,24 @@ class RecurringTransactionFormBloc
         state.copyWith(errorMessage: 'Please select an account'),
       );
       return;
+    }
+    if (state.type == TransactionType.transfer) {
+      if (state.toAccountId == null) {
+        emit(
+          state.copyWith(
+            errorMessage: 'Please select a destination account',
+          ),
+        );
+        return;
+      }
+      if (state.toAccountId == state.accountId) {
+        emit(
+          state.copyWith(
+            errorMessage: 'Source and destination accounts must differ',
+          ),
+        );
+        return;
+      }
     }
     if (state.startDate == null) {
       emit(
@@ -298,9 +369,13 @@ class RecurringTransactionFormBloc
       id: state.existingId ?? 0,
       userId: event.userId,
       accountId: state.accountId!,
-      categoryId: state.categoryId!,
+      categoryId: state.categoryId ?? 0, // repository replaces for transfers
       type: state.type,
       amountCents: amountCents,
+      originalCurrencyCode: state.selectedCurrencyCode,
+      originalAmountCents: amountCents,
+      toAccountId:
+          state.type == TransactionType.transfer ? state.toAccountId : null,
       title: state.title.trim(),
       note: state.note.trim().isEmpty ? null : state.note.trim(),
       scheduleType: state.scheduleType,
@@ -334,9 +409,11 @@ class RecurringTransactionFormBloc
   }
 
   /// Returns categories filtered by the current transaction type.
+  /// Returns an empty list for transfers (category is hidden).
   static List<CategoryEntity> filteredCategories(
     RecurringTransactionFormState state,
   ) {
+    if (state.type == TransactionType.transfer) return [];
     final typeStr = state.type == TransactionType.income ? 'income' : 'expense';
     return state.allCategories.where((c) {
       return c.transactionType == CategoryTransactionType.both ||

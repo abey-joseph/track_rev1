@@ -37,6 +37,14 @@ sealed class TransactionFormEvent with _$TransactionFormEvent {
     required String note,
   }) = TransactionFormNoteChanged;
 
+  const factory TransactionFormEvent.toAccountSelected({
+    required int accountId,
+  }) = TransactionFormToAccountSelected;
+
+  const factory TransactionFormEvent.currencySelected({
+    required String currencyCode,
+  }) = TransactionFormCurrencySelected;
+
   const factory TransactionFormEvent.submitted({
     required String userId,
   }) = TransactionFormSubmitted;

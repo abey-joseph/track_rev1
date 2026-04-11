@@ -24,6 +24,12 @@ abstract class TransactionEntity with _$TransactionEntity {
     @Default(false) bool isBookmarked,
     String? note,
 
+    /// The currency the user entered the amount in (ISO 4217 code, e.g. 'USD').
+    @Default('USD') String originalCurrencyCode,
+
+    /// The amount in the user's entered currency (cents, always positive).
+    @Default(0) int originalAmountCents,
+
     /// ID of the paired transaction row for transfers. Null otherwise.
     int? transferPeerId,
 

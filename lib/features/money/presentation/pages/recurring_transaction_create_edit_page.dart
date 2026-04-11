@@ -5,14 +5,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:track/features/auth/presentation/bloc/auth_state.dart';
+import 'package:track/features/money/domain/entities/account_entity.dart';
 import 'package:track/features/money/domain/entities/category_entity.dart';
+import 'package:track/features/money/domain/entities/currency_entity.dart';
 import 'package:track/features/money/domain/entities/recurring_transaction_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_entity.dart';
 import 'package:track/features/money/presentation/bloc/recurring_transaction_form/recurring_transaction_form_bloc.dart';
 import 'package:track/features/money/presentation/bloc/recurring_transaction_form/recurring_transaction_form_event.dart';
 import 'package:track/features/money/presentation/bloc/recurring_transaction_form/recurring_transaction_form_state.dart';
-import 'package:track/features/money/presentation/widgets/account_picker_grid.dart';
-import 'package:track/features/money/presentation/widgets/category_picker_grid.dart';
+import 'package:track/features/money/presentation/utils/money_icon_resolver.dart';
+import 'package:track/features/money/presentation/widgets/account_picker_sheet.dart';
+import 'package:track/features/money/presentation/widgets/category_picker_sheet.dart';
 import 'package:track/features/money/presentation/widgets/transaction_type_toggle.dart';
 import 'package:track/injection.dart';
 
@@ -91,11 +94,15 @@ class _RecurringFormView extends StatelessWidget {
                 RecurringTransactionFormState,
                 (bool, bool)
               >(
-                selector:
-                    (state) => (
-                      state.isSubmitting,
-                      state.amount.isNotEmpty && state.title.isNotEmpty,
-                    ),
+                selector: (state) {
+                  final hasBase =
+                      state.amount.isNotEmpty && state.title.isNotEmpty;
+                  final hasTarget =
+                      state.type == TransactionType.transfer
+                          ? state.toAccountId != null
+                          : state.categoryId != null;
+                  return (state.isSubmitting, hasBase && hasTarget);
+                },
                 builder: (context, data) {
                   final (isSubmitting, canSave) = data;
                   return FilledButton(
@@ -137,9 +144,9 @@ class _RecurringFormView extends StatelessWidget {
               SizedBox(height: 10),
               _TitleField(),
               SizedBox(height: 16),
-              _CategorySection(),
-              SizedBox(height: 16),
-              _AccountSection(),
+              _CategoryAccountRow(),
+              SizedBox(height: 8),
+              _ToAccountSection(),
               SizedBox(height: 16),
               _NoteField(),
               SizedBox(height: 20),
@@ -184,53 +191,107 @@ class _AmountField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = context.colorScheme;
     final textTheme = context.textTheme;
 
     return BlocSelector<
       RecurringTransactionFormBloc,
       RecurringTransactionFormState,
-      (TransactionType, String)
+      (TransactionType, String, List<CurrencyEntity>, String)
     >(
-      selector: (state) => (state.type, state.amount),
+      selector:
+          (state) => (
+            state.type,
+            state.amount,
+            state.availableCurrencies,
+            state.selectedCurrencyCode,
+          ),
       builder: (context, data) {
-        final (type, initialAmount) = data;
-        final isIncome = type == TransactionType.income;
-        final accentColor =
-            isIncome ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
+        final (type, initialAmount, currencies, selectedCode) = data;
+        final accentColor = switch (type) {
+          TransactionType.income => const Color(0xFF4CAF50),
+          TransactionType.transfer => const Color(0xFF2196F3),
+          _ => const Color(0xFFF44336),
+        };
+
+        final selected =
+            currencies.isNotEmpty
+                ? currencies.firstWhere(
+                  (c) => c.code == selectedCode,
+                  orElse: () => currencies.first,
+                )
+                : null;
+        final symbol = selected?.symbol ?? r'$';
+        final code = selected?.code ?? selectedCode;
 
         return Container(
-          padding: const EdgeInsets.symmetric(
-            vertical: 14,
-            horizontal: 20,
-          ),
           decoration: BoxDecoration(
             color: accentColor.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: accentColor.withValues(alpha: 0.15),
-            ),
+            border: Border.all(color: accentColor.withValues(alpha: 0.15)),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  r'$',
-                  style: textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w300,
-                    color: colorScheme.onSurface.withValues(
-                      alpha: 0.4,
-                    ),
+              // Currency selector (fixed size, tappable)
+              GestureDetector(
+                onTap:
+                    currencies.isEmpty
+                        ? null
+                        : () {
+                          FocusScope.of(context).unfocus();
+                          showModalBottomSheet<void>(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder:
+                                (_) => _CurrencyPickerSheet(
+                                  currencies: currencies,
+                                  selectedCode: selectedCode,
+                                  onSelected:
+                                      (c) => context
+                                          .read<RecurringTransactionFormBloc>()
+                                          .add(
+                                            RecurringTransactionFormEvent.currencySelected(
+                                              currencyCode: c,
+                                            ),
+                                          ),
+                                ),
+                          );
+                        },
+                child: Container(
+                  margin: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        symbol,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: accentColor,
+                        ),
+                      ),
+                      Text(
+                        code,
+                        style: textTheme.labelSmall?.copyWith(
+                          color: accentColor.withValues(alpha: 0.8),
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
-              IntrinsicWidth(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 80),
+              // Amount field (flexible)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 20),
                   child: _AmountInput(
                     accentColor: accentColor,
                     initialValue: initialAmount,
@@ -288,6 +349,7 @@ class _AmountInputState extends State<_AmountInput> {
     final textTheme = context.textTheme;
 
     return TextFormField(
+      autofocus: true,
       controller: _controller,
       keyboardType: const TextInputType.numberWithOptions(
         decimal: true,
@@ -301,8 +363,9 @@ class _AmountInputState extends State<_AmountInput> {
         fontWeight: FontWeight.w700,
         color: widget.accentColor,
       ),
-      textAlign: TextAlign.center,
+      textAlign: TextAlign.end,
       decoration: InputDecoration(
+        fillColor: Colors.transparent,
         hintText: '0.00',
         hintStyle: textTheme.displaySmall?.copyWith(
           fontWeight: FontWeight.w700,
@@ -424,84 +487,512 @@ class _InitialValueFieldState extends State<_InitialValueField> {
   }
 }
 
-class _CategorySection extends StatelessWidget {
-  const _CategorySection();
+class _CategoryAccountRow extends StatelessWidget {
+  const _CategoryAccountRow();
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = context.textTheme;
     final colorScheme = context.colorScheme;
+    final textTheme = context.textTheme;
 
     return BlocSelector<
       RecurringTransactionFormBloc,
       RecurringTransactionFormState,
-      (List<CategoryEntity>, int?, TransactionType)
+      (
+        TransactionType,
+        List<CategoryEntity>,
+        int?,
+        CategoryEntity?,
+        List<AccountEntity>,
+        int?,
+        AccountEntity?,
+      )
     >(
-      selector:
-          (state) => (
-            RecurringTransactionFormBloc.filteredCategories(state),
-            state.categoryId,
-            state.type,
-          ),
+      selector: (state) {
+        final categories = RecurringTransactionFormBloc.filteredCategories(
+          state,
+        );
+        final selectedCatId = state.categoryId;
+        final selectedCat =
+            selectedCatId != null
+                ? categories.where((c) => c.id == selectedCatId).firstOrNull
+                : null;
+        final accounts = state.availableAccounts;
+        final selectedAccId = state.accountId;
+        final selectedAcc =
+            selectedAccId != null
+                ? accounts.where((a) => a.id == selectedAccId).firstOrNull
+                : null;
+        return (
+          state.type,
+          categories,
+          selectedCatId,
+          selectedCat,
+          accounts,
+          selectedAccId,
+          selectedAcc,
+        );
+      },
       builder: (context, data) {
-        final (categories, selectedId, _) = data;
-        if (categories.isEmpty) {
-          return Text(
-            'No categories available',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          );
-        }
-        return CategoryPickerGrid(
-          categories: categories,
-          selectedId: selectedId,
-          onSelected:
-              (id) => context.read<RecurringTransactionFormBloc>().add(
-                RecurringTransactionFormEvent.categorySelected(
-                  categoryId: id,
+        final (
+          type,
+          categories,
+          selectedCatId,
+          selectedCat,
+          accounts,
+          selectedAccId,
+          selectedAcc,
+        ) = data;
+        final isTransfer = type == TransactionType.transfer;
+
+        return Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              // Category half — hidden for transfers
+              if (!isTransfer) ...[
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      FocusScope.of(context).unfocus();
+                      showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder:
+                            (_) => CategoryPickerSheet(
+                              categories: categories,
+                              selectedId: selectedCatId,
+                              onSelected:
+                                  (id) => context
+                                      .read<RecurringTransactionFormBloc>()
+                                      .add(
+                                        RecurringTransactionFormEvent.categorySelected(
+                                          categoryId: id,
+                                        ),
+                                      ),
+                            ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.grid_view_rounded,
+                            size: 20,
+                            color:
+                                selectedCat != null
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurface.withValues(
+                                      alpha: 0.4,
+                                    ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child:
+                                selectedCat == null
+                                    ? Text(
+                                      'Category',
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.onSurface.withValues(
+                                          alpha: 0.4,
+                                        ),
+                                      ),
+                                    )
+                                    : _CategoryChip(category: selectedCat),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Vertical divider
+                Container(
+                  width: 1,
+                  height: 24,
+                  color: colorScheme.onSurface.withValues(alpha: 0.12),
+                ),
+              ],
+              // Account half
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder:
+                          (_) => AccountPickerSheet(
+                            accounts: accounts,
+                            selectedId: selectedAccId,
+                            onSelected:
+                                (id) => context
+                                    .read<RecurringTransactionFormBloc>()
+                                    .add(
+                                      RecurringTransactionFormEvent.accountSelected(
+                                        accountId: id,
+                                      ),
+                                    ),
+                          ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet_rounded,
+                          size: 20,
+                          color:
+                              selectedAcc != null
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurface.withValues(
+                                    alpha: 0.4,
+                                  ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child:
+                              selectedAcc == null
+                                  ? Text(
+                                    isTransfer ? 'From account' : 'Account',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onSurface.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                    ),
+                                  )
+                                  : _AccountChip(
+                                    account: selectedAcc,
+                                    prefix: isTransfer ? 'From: ' : null,
+                                  ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+            ],
+          ),
         );
       },
     );
   }
 }
 
-class _AccountSection extends StatelessWidget {
-  const _AccountSection();
+class _ToAccountSection extends StatelessWidget {
+  const _ToAccountSection();
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = context.textTheme;
     final colorScheme = context.colorScheme;
+    final textTheme = context.textTheme;
 
     return BlocSelector<
       RecurringTransactionFormBloc,
       RecurringTransactionFormState,
-      (List<dynamic>, int?)
+      (List<AccountEntity>, int?, AccountEntity?)
     >(
-      selector: (state) => (state.availableAccounts, state.accountId),
-      builder: (context, data) {
-        final accounts = data.$1;
-        final selectedId = data.$2;
-        if (accounts.isEmpty) {
-          return Text(
-            'Loading accounts...',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          );
+      selector: (state) {
+        if (state.type != TransactionType.transfer) {
+          return (const [], null, null);
         }
-        return AccountPickerGrid(
-          accounts: accounts.cast(),
-          selectedId: selectedId,
-          onSelected:
-              (id) => context.read<RecurringTransactionFormBloc>().add(
-                RecurringTransactionFormEvent.accountSelected(
-                  accountId: id,
+        final filtered =
+            state.availableAccounts
+                .where((a) => a.id != state.accountId)
+                .toList();
+        final selectedId = state.toAccountId;
+        final selected =
+            selectedId != null
+                ? filtered.where((a) => a.id == selectedId).firstOrNull
+                : null;
+        return (filtered, selectedId, selected);
+      },
+      builder: (context, data) {
+        final (accounts, selectedId, selectedAccount) = data;
+        if (accounts.isEmpty) return const SizedBox.shrink();
+
+        return GestureDetector(
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder:
+                  (_) => AccountPickerSheet(
+                    accounts: accounts,
+                    selectedId: selectedId,
+                    onSelected:
+                        (id) =>
+                            context.read<RecurringTransactionFormBloc>().add(
+                              RecurringTransactionFormEvent.toAccountSelected(
+                                accountId: id,
+                              ),
+                            ),
+                  ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.swap_horiz_rounded,
+                  size: 22,
+                  color:
+                      selectedAccount != null
+                          ? const Color(0xFF2196F3)
+                          : colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child:
+                      selectedAccount == null
+                          ? Text(
+                            'To account',
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurface.withValues(
+                                alpha: 0.4,
+                              ),
+                            ),
+                          )
+                          : _AccountChip(account: selectedAccount),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({required this.category});
+
+  final CategoryEntity category;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = context.textTheme;
+    final colorHex = category.colorHex.replaceFirst('#', '');
+    final color = Color(int.parse('FF$colorHex', radix: 16));
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          child: Icon(
+            resolveMoneyIcon(category.iconName),
+            size: 12,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            category.name,
+            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            softWrap: false,
+            overflow: TextOverflow.fade,
+            maxLines: 1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AccountChip extends StatelessWidget {
+  const _AccountChip({required this.account, this.prefix});
+
+  final AccountEntity account;
+  final String? prefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = context.textTheme;
+    final colorHex = account.colorHex.replaceFirst('#', '');
+    final color = Color(int.parse('FF$colorHex', radix: 16));
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          child: Icon(
+            resolveMoneyIcon(account.iconName),
+            size: 12,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(width: 6),
+        if (prefix != null)
+          Text(
+            prefix!,
+            style: textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
+        Flexible(
+          child: Text(
+            account.name,
+            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            softWrap: false,
+            overflow: TextOverflow.fade,
+            maxLines: 1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CurrencyPickerSheet extends StatelessWidget {
+  const _CurrencyPickerSheet({
+    required this.currencies,
+    required this.selectedCode,
+    required this.onSelected,
+  });
+
+  final List<CurrencyEntity> currencies;
+  final String selectedCode;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    final textTheme = context.textTheme;
+
+    return DraggableScrollableSheet(
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      builder: (_, controller) {
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurface.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Text(
+                  'Select Currency',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GridView.builder(
+                  controller: controller,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemCount: currencies.length,
+                  itemBuilder: (_, index) {
+                    final currency = currencies[index];
+                    final isSelected = currency.code == selectedCode;
+                    return GestureDetector(
+                      onTap: () {
+                        onSelected(currency.code);
+                        Navigator.pop(context);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
+                          color:
+                              isSelected
+                                  ? colorScheme.primaryContainer
+                                  : colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              isSelected
+                                  ? Border.all(
+                                    color: colorScheme.primary,
+                                    width: 1.5,
+                                  )
+                                  : null,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              currency.symbol,
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    isSelected
+                                        ? colorScheme.primary
+                                        : colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              currency.code,
+                              style: textTheme.labelSmall?.copyWith(
+                                color:
+                                    isSelected
+                                        ? colorScheme.primary
+                                        : colorScheme.onSurface.withValues(
+                                          alpha: 0.6,
+                                        ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

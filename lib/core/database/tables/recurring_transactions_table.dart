@@ -32,6 +32,18 @@ class RecurringTransactions extends Table {
   TextColumn get monthDaysJson => text().nullable()();
   IntColumn get timesPerMonth => integer().nullable()();
 
+  /// Destination account for transfer-type recurring rules.
+  /// Null for income/expense types.
+  IntColumn get toAccountId => integer().nullable().references(Accounts, #id)();
+
+  /// The currency the user entered the amount in (ISO 4217 code, e.g. 'USD').
+  TextColumn get originalCurrencyCode =>
+      text().withDefault(const Constant('USD'))();
+
+  /// The amount in the user's entered currency (cents, always positive).
+  IntColumn get originalAmountCents =>
+      integer().withDefault(const Constant(0))();
+
   // Lifecycle
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();

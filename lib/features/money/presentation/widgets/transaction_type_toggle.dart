@@ -25,6 +25,11 @@ class TransactionTypeToggle extends StatelessWidget {
           label: Text('Income'),
           icon: Icon(Icons.arrow_downward_rounded),
         ),
+        ButtonSegment(
+          value: TransactionType.transfer,
+          label: Text('Transfer'),
+          icon: Icon(Icons.swap_horiz_rounded),
+        ),
       ],
       selected: {selected},
       onSelectionChanged: (s) => onChanged(s.first),

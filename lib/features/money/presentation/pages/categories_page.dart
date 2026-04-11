@@ -251,6 +251,7 @@ class _CategoryCard extends StatelessWidget {
     CategoryTransactionType.income => 'Income',
     CategoryTransactionType.expense => 'Expense',
     CategoryTransactionType.both => 'Both',
+    CategoryTransactionType.transfer => 'Transfer',
   };
 
   Color _typeColor(CategoryTransactionType type, ColorScheme cs) =>
@@ -258,6 +259,7 @@ class _CategoryCard extends StatelessWidget {
         CategoryTransactionType.income => Colors.green,
         CategoryTransactionType.expense => cs.error,
         CategoryTransactionType.both => cs.primary,
+        CategoryTransactionType.transfer => const Color(0xFF2196F3),
       };
 }
 

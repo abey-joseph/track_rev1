@@ -61,6 +61,14 @@ sealed class RecurringTransactionFormEvent
     required int count,
   }) = RecurringTransactionFormTimesPerMonthChanged;
 
+  const factory RecurringTransactionFormEvent.toAccountSelected({
+    required int accountId,
+  }) = RecurringTransactionFormToAccountSelected;
+
+  const factory RecurringTransactionFormEvent.currencySelected({
+    required String currencyCode,
+  }) = RecurringTransactionFormCurrencySelected;
+
   const factory RecurringTransactionFormEvent.submitted({
     required String userId,
   }) = RecurringTransactionFormSubmitted;
