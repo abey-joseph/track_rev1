@@ -7,6 +7,7 @@ import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:track/features/auth/presentation/bloc/auth_state.dart';
 import 'package:track/features/money/domain/entities/account_entity.dart';
 import 'package:track/features/money/domain/entities/category_entity.dart';
+import 'package:track/features/money/domain/entities/currency_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_entity.dart';
 import 'package:track/features/money/presentation/bloc/transaction_form_bloc.dart';
 import 'package:track/features/money/presentation/bloc/transaction_form_event.dart';
@@ -72,11 +73,15 @@ class _TransactionFormView extends StatelessWidget {
                 TransactionFormState,
                 (bool, bool)
               >(
-                selector:
-                    (state) => (
-                      state.isSubmitting,
-                      state.amount.isNotEmpty && state.title.isNotEmpty,
-                    ),
+                selector: (state) {
+                  final hasBase =
+                      state.amount.isNotEmpty && state.title.isNotEmpty;
+                  final hasTarget =
+                      state.type == TransactionType.transfer
+                          ? state.toAccountId != null
+                          : state.categoryId != null;
+                  return (state.isSubmitting, hasBase && hasTarget);
+                },
                 builder: (context, data) {
                   final (isSubmitting, canSave) = data;
                   return FilledButton(
@@ -117,6 +122,8 @@ class _TransactionFormView extends StatelessWidget {
               _CategorySection(),
               SizedBox(height: 16),
               _AccountSection(),
+              SizedBox(height: 8),
+              _ToAccountSection(),
               SizedBox(height: 16),
               _DateSection(),
               SizedBox(height: 16),
@@ -160,62 +167,108 @@ class _AmountField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = context.colorScheme;
     final textTheme = context.textTheme;
 
     return BlocSelector<
       TransactionFormBloc,
       TransactionFormState,
-      (TransactionType, String)
+      (TransactionType, List<CurrencyEntity>, String)
     >(
-      selector: (state) {
-        final account =
-            state.availableAccounts
-                .where((a) => a.id == state.accountId)
-                .firstOrNull;
-        final currencyCode = account?.currency;
-        final currency =
-            currencyCode != null
-                ? state.availableCurrencies
-                    .where((c) => c.code == currencyCode)
-                    .firstOrNull
-                : state.availableCurrencies
-                    .where((c) => c.isDefault)
-                    .firstOrNull;
-        return (state.type, currency?.symbol ?? r'$');
-      },
+      selector:
+          (state) => (
+            state.type,
+            state.availableCurrencies,
+            state.selectedCurrencyCode,
+          ),
       builder: (context, data) {
-        final (type, currencySymbol) = data;
-        final isIncome = type == TransactionType.income;
-        final accentColor =
-            isIncome ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
+        final (type, currencies, selectedCode) = data;
+        final accentColor = switch (type) {
+          TransactionType.income => const Color(0xFF4CAF50),
+          TransactionType.transfer => const Color(0xFF2196F3),
+          _ => const Color(0xFFF44336),
+        };
+
+        final selected =
+            currencies.isNotEmpty
+                ? currencies.firstWhere(
+                  (c) => c.code == selectedCode,
+                  orElse: () => currencies.first,
+                )
+                : null;
+        final symbol = selected?.symbol ?? r'$';
+        final code = selected?.code ?? selectedCode;
 
         return Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           decoration: BoxDecoration(
             color: accentColor.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: accentColor.withValues(alpha: 0.15)),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  currencySymbol,
-                  style: textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w300,
-                    color: colorScheme.onSurface.withValues(alpha: 0.4),
+              // Currency selector (fixed size, tappable)
+              GestureDetector(
+                onTap:
+                    currencies.isEmpty
+                        ? null
+                        : () {
+                          FocusScope.of(context).unfocus();
+                          showModalBottomSheet<void>(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder:
+                                (_) => _CurrencyPickerSheet(
+                                  currencies: currencies,
+                                  selectedCode: selectedCode,
+                                  onSelected:
+                                      (c) => context
+                                          .read<TransactionFormBloc>()
+                                          .add(
+                                            TransactionFormEvent.currencySelected(
+                                              currencyCode: c,
+                                            ),
+                                          ),
+                                ),
+                          );
+                        },
+                child: Container(
+                  margin: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        symbol,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: accentColor,
+                        ),
+                      ),
+                      Text(
+                        code,
+                        style: textTheme.labelSmall?.copyWith(
+                          color: accentColor.withValues(alpha: 0.8),
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
-              IntrinsicWidth(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 80),
+              // Amount field (flexible)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 20),
                   child: TextFormField(
+                    autofocus: true,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -228,7 +281,7 @@ class _AmountField extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       color: accentColor,
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.end,
                     decoration: InputDecoration(
                       hintText: '0.00',
                       hintStyle: textTheme.displaySmall?.copyWith(
@@ -312,6 +365,11 @@ class _CategorySection extends StatelessWidget {
       },
       builder: (context, data) {
         final (categories, selectedId, selectedCategory) = data;
+
+        // Hide category picker for transfers
+        if (categories.isEmpty && selectedCategory == null) {
+          return const SizedBox.shrink();
+        }
 
         return GestureDetector(
           onTap:
@@ -424,7 +482,7 @@ class _AccountSection extends StatelessWidget {
     return BlocSelector<
       TransactionFormBloc,
       TransactionFormState,
-      (List<AccountEntity>, int?, AccountEntity?)
+      (List<AccountEntity>, int?, AccountEntity?, bool)
     >(
       selector: (state) {
         final accounts = List<AccountEntity>.from(state.availableAccounts);
@@ -433,10 +491,15 @@ class _AccountSection extends StatelessWidget {
             selectedId != null
                 ? accounts.where((a) => a.id == selectedId).firstOrNull
                 : null;
-        return (accounts, selectedId, selected);
+        return (
+          accounts,
+          selectedId,
+          selected,
+          state.type == TransactionType.transfer,
+        );
       },
       builder: (context, data) {
-        final (accounts, selectedId, selectedAccount) = data;
+        final (accounts, selectedId, selectedAccount, isTransfer) = data;
 
         if (accounts.isEmpty) {
           return Text(
@@ -486,14 +549,17 @@ class _AccountSection extends StatelessWidget {
                   child:
                       selectedAccount == null
                           ? Text(
-                            'Select account',
+                            isTransfer ? 'From account' : 'Select account',
                             style: textTheme.bodyLarge?.copyWith(
                               color: colorScheme.onSurface.withValues(
                                 alpha: 0.4,
                               ),
                             ),
                           )
-                          : _AccountChip(account: selectedAccount),
+                          : _AccountChip(
+                            account: selectedAccount,
+                            prefix: isTransfer ? 'From: ' : null,
+                          ),
                 ),
                 Icon(
                   Icons.chevron_right_rounded,
@@ -510,9 +576,10 @@ class _AccountSection extends StatelessWidget {
 }
 
 class _AccountChip extends StatelessWidget {
-  const _AccountChip({required this.account});
+  const _AccountChip({required this.account, this.prefix});
 
   final AccountEntity account;
+  final String? prefix;
 
   @override
   Widget build(BuildContext context) {
@@ -533,11 +600,236 @@ class _AccountChip extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
+        if (prefix != null)
+          Text(
+            prefix!,
+            style: textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
         Text(
           account.name,
           style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
         ),
       ],
+    );
+  }
+}
+
+class _ToAccountSection extends StatelessWidget {
+  const _ToAccountSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    final textTheme = context.textTheme;
+
+    return BlocSelector<
+      TransactionFormBloc,
+      TransactionFormState,
+      (List<AccountEntity>, int?, int?, AccountEntity?)
+    >(
+      selector: (state) {
+        if (state.type != TransactionType.transfer) {
+          return (const [], null, null, null);
+        }
+        // Exclude the from-account
+        final filtered =
+            state.availableAccounts
+                .where((a) => a.id != state.accountId)
+                .toList();
+        final selectedId = state.toAccountId;
+        final selected =
+            selectedId != null
+                ? filtered.where((a) => a.id == selectedId).firstOrNull
+                : null;
+        return (filtered, selectedId, state.accountId, selected);
+      },
+      builder: (context, data) {
+        final (accounts, selectedId, _, selectedAccount) = data;
+
+        if (accounts.isEmpty) return const SizedBox.shrink();
+
+        return GestureDetector(
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder:
+                  (_) => AccountPickerSheet(
+                    accounts: accounts,
+                    selectedId: selectedId,
+                    onSelected:
+                        (id) => context.read<TransactionFormBloc>().add(
+                          TransactionFormEvent.toAccountSelected(accountId: id),
+                        ),
+                  ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.swap_horiz_rounded,
+                  size: 22,
+                  color:
+                      selectedAccount != null
+                          ? const Color(0xFF2196F3)
+                          : colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child:
+                      selectedAccount == null
+                          ? Text(
+                            'To account',
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurface.withValues(
+                                alpha: 0.4,
+                              ),
+                            ),
+                          )
+                          : _AccountChip(
+                            account: selectedAccount,
+                            prefix: 'To: ',
+                          ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CurrencyPickerSheet extends StatelessWidget {
+  const _CurrencyPickerSheet({
+    required this.currencies,
+    required this.selectedCode,
+    required this.onSelected,
+  });
+
+  final List<CurrencyEntity> currencies;
+  final String selectedCode;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    final textTheme = context.textTheme;
+
+    return DraggableScrollableSheet(
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      builder: (_, controller) {
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurface.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Text(
+                  'Select Currency',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GridView.builder(
+                  controller: controller,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemCount: currencies.length,
+                  itemBuilder: (_, index) {
+                    final currency = currencies[index];
+                    final isSelected = currency.code == selectedCode;
+                    return GestureDetector(
+                      onTap: () {
+                        onSelected(currency.code);
+                        Navigator.pop(context);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
+                          color:
+                              isSelected
+                                  ? colorScheme.primaryContainer
+                                  : colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              isSelected
+                                  ? Border.all(
+                                    color: colorScheme.primary,
+                                    width: 1.5,
+                                  )
+                                  : null,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              currency.symbol,
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    isSelected
+                                        ? colorScheme.primary
+                                        : colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              currency.code,
+                              style: textTheme.labelSmall?.copyWith(
+                                color:
+                                    isSelected
+                                        ? colorScheme.primary
+                                        : colorScheme.onSurface.withValues(
+                                          alpha: 0.6,
+                                        ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

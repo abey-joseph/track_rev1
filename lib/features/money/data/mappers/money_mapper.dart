@@ -126,6 +126,8 @@ extension TransactionRowToEntity on Transaction {
     transferPeerId: transferPeerId,
     sourceRecurringTransactionId: sourceRecurringTransactionId,
     sourceOccurrenceDate: sourceOccurrenceDate,
+    originalCurrencyCode: originalCurrencyCode,
+    originalAmountCents: originalAmountCents,
     createdAt: createdAt,
     updatedAt: updatedAt,
   );
@@ -146,6 +148,8 @@ extension TransactionEntityToCompanion on TransactionEntity {
     transferPeerId: Value(transferPeerId),
     sourceRecurringTransactionId: Value(sourceRecurringTransactionId),
     sourceOccurrenceDate: Value(sourceOccurrenceDate),
+    originalCurrencyCode: Value(originalCurrencyCode),
+    originalAmountCents: Value(originalAmountCents),
     createdAt: Value(createdAt),
     updatedAt: Value(updatedAt),
   );
@@ -205,6 +209,9 @@ extension RecurringTransactionRowToEntity on RecurringTransaction {
             ? (jsonDecode(monthDaysJson!) as List).cast<int>()
             : const [],
     timesPerMonth: timesPerMonth,
+    toAccountId: toAccountId,
+    originalCurrencyCode: originalCurrencyCode,
+    originalAmountCents: originalAmountCents,
     isActive: isActive,
     isCompleted: isCompleted,
     lastGeneratedDate: lastGeneratedDate,
@@ -235,6 +242,9 @@ extension RecurringTransactionEntityToCompanion on RecurringTransactionEntity {
           monthDays.isEmpty ? null : jsonEncode(monthDays),
         ),
         timesPerMonth: Value(timesPerMonth),
+        toAccountId: Value(toAccountId),
+        originalCurrencyCode: Value(originalCurrencyCode),
+        originalAmountCents: Value(originalAmountCents),
         isActive: Value(isActive),
         isCompleted: Value(isCompleted),
         lastGeneratedDate: Value(lastGeneratedDate),

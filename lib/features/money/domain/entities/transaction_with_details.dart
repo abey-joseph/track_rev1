@@ -11,5 +11,14 @@ abstract class TransactionWithDetails with _$TransactionWithDetails {
     required String categoryIconName,
     required String categoryColorHex,
     required String accountName,
+
+    /// ISO 4217 code of the original entry currency (e.g. 'USD').
+    @Default('USD') String currencyCode,
+
+    /// Symbol of the original entry currency (e.g. '$').
+    @Default(r'$') String currencySymbol,
+
+    /// Name of the destination account for transfers. Null otherwise.
+    String? toAccountName,
   }) = _TransactionWithDetails;
 }

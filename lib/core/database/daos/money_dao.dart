@@ -214,6 +214,64 @@ class MoneyDao extends DatabaseAccessor<AppDatabase> with _$MoneyDaoMixin {
     });
   }
 
+  /// Inserts a transfer pair atomically and adjusts both account balances.
+  ///
+  /// Returns the ID of the "from" row.
+  Future<int> insertTransferPair(
+    TransactionsCompanion fromEntry,
+    TransactionsCompanion toEntry,
+    int fromAccountId,
+    int toAccountId,
+    int amountCents,
+  ) async {
+    return transaction(() async {
+      // Step 1: insert from-row without peer reference
+      final idA = await into(transactions).insert(fromEntry);
+      // Step 2: insert to-row referencing from-row as peer
+      final toWithPeer = toEntry.copyWith(transferPeerId: Value(idA));
+      final idB = await into(transactions).insert(toWithPeer);
+      // Step 3: update from-row with peer reference
+      await (update(transactions)..where((t) => t.id.equals(idA))).write(
+        TransactionsCompanion(transferPeerId: Value(idB)),
+      );
+      // Step 4: adjust balances
+      await _adjustBalance(fromAccountId, -amountCents);
+      await _adjustBalance(toAccountId, amountCents);
+      return idA;
+    });
+  }
+
+  /// Deletes a transfer pair atomically and reverses both account balances.
+  Future<void> deleteTransferPair(
+    int idA,
+    int idB,
+    int fromAccountId,
+    int toAccountId,
+    int amountCents,
+  ) async {
+    await transaction(() async {
+      // Clear peer references first to avoid FK constraint issues
+      await (update(transactions)..where((t) => t.id.equals(idA))).write(
+        const TransactionsCompanion(transferPeerId: Value(null)),
+      );
+      await (update(transactions)..where((t) => t.id.equals(idB))).write(
+        const TransactionsCompanion(transferPeerId: Value(null)),
+      );
+      // Delete both rows
+      await (delete(transactions)..where((t) => t.id.equals(idA))).go();
+      await (delete(transactions)..where((t) => t.id.equals(idB))).go();
+      // Reverse balance adjustments
+      await _adjustBalance(fromAccountId, amountCents);
+      await _adjustBalance(toAccountId, -amountCents);
+    });
+  }
+
+  /// Returns the currency row matching [code] for [userId], or null.
+  Future<Currency?> getCurrencyByCode(String code, String userId) =>
+      (select(currencies)..where(
+        (c) => c.code.equals(code) & c.userId.equals(userId),
+      )).getSingleOrNull();
+
   /// Adjusts [Accounts.balance] for [accountId] by [delta] cents.
   Future<void> _adjustBalance(int accountId, int delta) async {
     await (update(accounts)..where((a) => a.id.equals(accountId))).write(

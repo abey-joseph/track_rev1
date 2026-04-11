@@ -37,6 +37,14 @@ class Transactions extends Table {
   /// ISO-8601 date of the occurrence this transaction represents.
   TextColumn get sourceOccurrenceDate => text().nullable()();
 
+  /// The currency the user entered the amount in (ISO 4217 code, e.g. 'USD').
+  TextColumn get originalCurrencyCode =>
+      text().withDefault(const Constant('USD'))();
+
+  /// The amount in the user's entered currency (cents, always positive).
+  IntColumn get originalAmountCents =>
+      integer().withDefault(const Constant(0))();
+
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }

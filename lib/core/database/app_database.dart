@@ -49,13 +49,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
       await _seedDefaultCategories();
+      await _seedTransferCategory();
     },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
@@ -81,6 +82,36 @@ class AppDatabase extends _$AppDatabase {
           transactions,
           transactions.sourceOccurrenceDate,
         );
+      }
+      if (from < 7) {
+        await m.addColumn(transactions, transactions.originalCurrencyCode);
+        await m.addColumn(transactions, transactions.originalAmountCents);
+        await m.addColumn(
+          recurringTransactions,
+          recurringTransactions.toAccountId,
+        );
+        await m.addColumn(
+          recurringTransactions,
+          recurringTransactions.originalCurrencyCode,
+        );
+        await m.addColumn(
+          recurringTransactions,
+          recurringTransactions.originalAmountCents,
+        );
+        const usd = "'USD'";
+        // Backfill existing transaction rows from their account's currency.
+        await customStatement(
+          'UPDATE transactions SET original_amount_cents = amount, '
+          'original_currency_code = COALESCE((SELECT currency FROM accounts '
+          'WHERE accounts.id = transactions.account_id),$usd)',
+        );
+        // Also backfill recurring transactions.
+        await customStatement(
+          'UPDATE recurring_transactions SET original_amount_cents = amount, '
+          'original_currency_code = COALESCE((SELECT currency FROM accounts '
+          'WHERE accounts.id = recurring_transactions.account_id),$usd)',
+        );
+        await _seedTransferCategory();
       }
     },
   );
@@ -212,5 +243,20 @@ class AppDatabase extends _$AppDatabase {
     for (final entry in defaults) {
       await into(categories).insert(entry);
     }
+  }
+
+  Future<void> _seedTransferCategory() async {
+    final now = DateTime.now();
+    await into(categories).insert(
+      CategoriesCompanion.insert(
+        name: 'Transfer',
+        transactionType: 'transfer',
+        iconName: 'swap_horiz',
+        colorHex: '#2196F3',
+        isDefault: const Value(true),
+        sortOrder: const Value(0),
+        createdAt: now,
+      ),
+    );
   }
 }

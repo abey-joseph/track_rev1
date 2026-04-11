@@ -37,6 +37,15 @@ abstract class RecurringTransactionEntity with _$RecurringTransactionEntity {
     required DateTime createdAt,
     required DateTime updatedAt,
 
+    /// Destination account for transfer-type rules. Null for income/expense.
+    int? toAccountId,
+
+    /// The currency the user entered the amount in (ISO 4217 code, e.g. 'USD').
+    @Default('USD') String originalCurrencyCode,
+
+    /// The amount in the user's entered currency (cents, always positive).
+    @Default(0) int originalAmountCents,
+
     String? note,
 
     /// Weekday ints (1=Mon..7=Sun) for weekly schedules.

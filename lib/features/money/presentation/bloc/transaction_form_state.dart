@@ -19,6 +19,8 @@ abstract class TransactionFormState with _$TransactionFormState {
     @Default([]) List<CategoryEntity> allCategories,
     @Default([]) List<AccountEntity> availableAccounts,
     @Default([]) List<CurrencyEntity> availableCurrencies,
+    @Default(null) int? toAccountId,
+    @Default('USD') String selectedCurrencyCode,
     @Default(false) bool isSubmitting,
     @Default(false) bool isSuccess,
     String? errorMessage,

@@ -20,10 +20,39 @@ class TransactionListItem extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final textTheme = context.textTheme;
     final txn = transaction.transaction;
+    final isTransfer = txn.type == TransactionType.transfer;
     final isIncome = txn.type == TransactionType.income;
-    final color = _parseColor(transaction.categoryColorHex);
-    final amountColor =
-        isIncome ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
+
+    final amountColor = switch (txn.type) {
+      TransactionType.income => const Color(0xFF4CAF50),
+      TransactionType.transfer => const Color(0xFF2196F3),
+      _ => const Color(0xFFF44336),
+    };
+
+    // For transfers: blue circle with swap icon; otherwise use category color/icon
+    final iconColor =
+        isTransfer
+            ? const Color(0xFF2196F3)
+            : _parseColor(transaction.categoryColorHex);
+    final icon =
+        isTransfer
+            ? Icons.swap_horiz_rounded
+            : resolveMoneyIcon(transaction.categoryIconName);
+
+    // Subtitle: for transfers show "From X → To Y"; otherwise "Category · Account"
+    final subtitle =
+        isTransfer && transaction.toAccountName != null
+            ? '${transaction.accountName} → ${transaction.toAccountName}'
+            : '${transaction.categoryName} · ${transaction.accountName}';
+
+    // Display the original entered amount
+    final displayCents =
+        txn.originalAmountCents > 0 ? txn.originalAmountCents : txn.amountCents;
+    final amountStr = formatCurrency(
+      displayCents,
+      symbol: transaction.currencySymbol,
+    );
+    final prefix = isTransfer ? '' : (isIncome ? '+' : '-');
 
     return Card(
       elevation: 0,
@@ -36,22 +65,22 @@ class TransactionListItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              // Category icon
+              // Category / transfer icon
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: color,
+                  color: iconColor,
                 ),
                 child: Icon(
-                  resolveMoneyIcon(transaction.categoryIconName),
+                  icon,
                   size: 20,
                   color: Colors.white,
                 ),
               ),
               const SizedBox(width: 12),
-              // Title and category
+              // Title and subtitle
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,7 +95,7 @@ class TransactionListItem extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${transaction.categoryName} · ${transaction.accountName}',
+                      subtitle,
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
@@ -79,7 +108,7 @@ class TransactionListItem extends StatelessWidget {
               const SizedBox(width: 8),
               // Amount
               Text(
-                '${isIncome ? '+' : '-'}${formatCurrency(txn.amountCents)}',
+                '$prefix$amountStr',
                 style: textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: amountColor,

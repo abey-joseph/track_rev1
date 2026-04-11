@@ -22,6 +22,26 @@ abstract class MoneyLocalDataSource {
 
   Future<void> deleteTransaction(int id, int accountId, int balanceDelta);
 
+  Future<int> insertTransferPair(
+    TransactionsCompanion fromEntry,
+    TransactionsCompanion toEntry,
+    int fromAccountId,
+    int toAccountId,
+    int amountCents,
+  );
+
+  Future<void> deleteTransferPair(
+    int idA,
+    int idB,
+    int fromAccountId,
+    int toAccountId,
+    int amountCents,
+  );
+
+  Future<Currency?> getCurrencyByCode(String code, String userId);
+
+  Future<Transaction?> getTransactionById(int id);
+
   Stream<List<Transaction>> watchBookmarkedTransactions(String userId);
 
   Future<void> setBookmark(int transactionId, {required bool isBookmarked});
@@ -132,6 +152,15 @@ class MoneyLocalDataSourceImpl implements MoneyLocalDataSource {
   }
 
   @override
+  Future<Transaction?> getTransactionById(int id) async {
+    try {
+      return await _db.moneyDao.getTransactionById(id);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
   Future<void> deleteTransaction(
     int id,
     int accountId,
@@ -192,6 +221,57 @@ class MoneyLocalDataSourceImpl implements MoneyLocalDataSource {
   ) async {
     try {
       return await _db.moneyDao.insertTransaction(entry, balanceDelta);
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<int> insertTransferPair(
+    TransactionsCompanion fromEntry,
+    TransactionsCompanion toEntry,
+    int fromAccountId,
+    int toAccountId,
+    int amountCents,
+  ) async {
+    try {
+      return await _db.moneyDao.insertTransferPair(
+        fromEntry,
+        toEntry,
+        fromAccountId,
+        toAccountId,
+        amountCents,
+      );
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> deleteTransferPair(
+    int idA,
+    int idB,
+    int fromAccountId,
+    int toAccountId,
+    int amountCents,
+  ) async {
+    try {
+      await _db.moneyDao.deleteTransferPair(
+        idA,
+        idB,
+        fromAccountId,
+        toAccountId,
+        amountCents,
+      );
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<Currency?> getCurrencyByCode(String code, String userId) async {
+    try {
+      return await _db.moneyDao.getCurrencyByCode(code, userId);
     } catch (e) {
       throw CacheException(message: e.toString());
     }
