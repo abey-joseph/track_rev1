@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
@@ -7,6 +8,8 @@ import 'package:track/core/router/app_router.gr.dart';
 import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:track/features/auth/presentation/bloc/auth_event.dart';
 import 'package:track/features/auth/presentation/bloc/auth_state.dart';
+import 'package:track/features/onboarding/domain/usecases/check_onboarding_status.dart';
+import 'package:track/injection.dart';
 
 @RoutePage()
 class SplashPage extends StatefulWidget {
@@ -101,15 +104,23 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     _pendingState!.when(
       initial: () {},
       loading: () {},
-      authenticated: (_) {
-        context.router.replaceAll([const AppShellRoute()]);
-      },
-      unauthenticated: () {
-        context.router.replaceAll([const LoginRoute()]);
-      },
-      error: (_) {
-        context.router.replaceAll([const LoginRoute()]);
-      },
+      authenticated: (user) => unawaited(_navigateAuthenticated(user.uid)),
+      unauthenticated:
+          () => unawaited(context.router.replaceAll([const LoginRoute()])),
+      error: (_) => unawaited(context.router.replaceAll([const LoginRoute()])),
+    );
+  }
+
+  Future<void> _navigateAuthenticated(String uid) async {
+    final result = await getIt<CheckOnboardingStatus>().call(uid);
+    if (!mounted) return;
+    result.fold(
+      (_) => unawaited(context.router.replaceAll([const AppShellRoute()])),
+      (completed) => unawaited(
+        completed
+            ? context.router.replaceAll([const AppShellRoute()])
+            : context.router.replaceAll([OnboardingRoute(userId: uid)]),
+      ),
     );
   }
 

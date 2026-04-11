@@ -24,6 +24,8 @@ abstract class AuthRemoteDataSource {
   Future<UserDto> signInAnonymously();
 
   Future<void> signOut();
+
+  Future<void> updateDisplayName(String displayName);
 }
 
 @LazySingleton(as: AuthRemoteDataSource)
@@ -121,6 +123,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       _firebaseAuth.signOut(),
       GoogleSignIn.instance.signOut(),
     ]);
+  }
+
+  @override
+  Future<void> updateDisplayName(String displayName) async {
+    try {
+      await _firebaseAuth.currentUser?.updateDisplayName(displayName);
+    } on firebase.FirebaseAuthException catch (e) {
+      throw ServerException(
+        message: e.message ?? 'Failed to update display name',
+        statusCode: _mapAuthErrorCode(e.code),
+      );
+    }
   }
 
   UserDto _mapFirebaseUser(firebase.User user) => UserDto(

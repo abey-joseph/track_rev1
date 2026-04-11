@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,19 +12,36 @@ import 'package:track/features/auth/presentation/bloc/auth_event.dart';
 import 'package:track/features/auth/presentation/bloc/auth_state.dart';
 import 'package:track/features/auth/presentation/widgets/email_sign_in_form.dart';
 import 'package:track/features/auth/presentation/widgets/social_sign_in_button.dart';
+import 'package:track/features/onboarding/domain/usecases/check_onboarding_status.dart';
+import 'package:track/injection.dart';
 
 @RoutePage()
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
+
+  Future<void> _handleAuthenticated(
+    BuildContext context,
+    String uid,
+  ) async {
+    final result = await getIt<CheckOnboardingStatus>().call(uid);
+    if (!context.mounted) return;
+    result.fold(
+      (_) => unawaited(context.router.replaceAll([const AppShellRoute()])),
+      (completed) => unawaited(
+        completed
+            ? context.router.replaceAll([const AppShellRoute()])
+            : context.router.replaceAll([OnboardingRoute(userId: uid)]),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         state.whenOrNull(
-          authenticated: (user) {
-            context.router.replaceAll([const AppShellRoute()]);
-          },
+          authenticated:
+              (user) => unawaited(_handleAuthenticated(context, user.uid)),
           error: (failure) {
             context.showSnackBar(failure.toString(), isError: true);
           },

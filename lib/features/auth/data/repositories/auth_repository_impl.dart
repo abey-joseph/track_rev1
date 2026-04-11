@@ -79,6 +79,22 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, Unit>> updateDisplayName(
+    String displayName,
+  ) async {
+    try {
+      await _remoteDataSource.updateDisplayName(displayName);
+      return const Right(unit);
+    } on ServerException catch (e) {
+      return Left(
+        Failure.auth(message: e.message, code: e.statusCode?.toString()),
+      );
+    } on Exception catch (e) {
+      return Left(Failure.unexpected(message: e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, UserEntity>> createAccountWithEmail({
     required String email,
     required String password,

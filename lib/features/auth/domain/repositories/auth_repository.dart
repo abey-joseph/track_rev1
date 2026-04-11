@@ -18,6 +18,8 @@ abstract class AuthRepository {
 
   Future<Either<Failure, Unit>> signOut();
 
+  Future<Either<Failure, Unit>> updateDisplayName(String displayName);
+
   Future<Either<Failure, UserEntity>> createAccountWithEmail({
     required String email,
     required String password,
