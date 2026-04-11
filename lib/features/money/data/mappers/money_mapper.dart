@@ -275,6 +275,7 @@ String _accountTypeName(AccountType t) => switch (t) {
 CategoryTransactionType _parseCategoryType(String raw) => switch (raw) {
   'income' => CategoryTransactionType.income,
   'both' => CategoryTransactionType.both,
+  'transfer' => CategoryTransactionType.transfer,
   _ => CategoryTransactionType.expense,
 };
 
@@ -282,6 +283,7 @@ String _categoryTypeName(CategoryTransactionType t) => switch (t) {
   CategoryTransactionType.income => 'income',
   CategoryTransactionType.expense => 'expense',
   CategoryTransactionType.both => 'both',
+  CategoryTransactionType.transfer => 'transfer',
 };
 
 TransactionType _parseTransactionType(String raw) => switch (raw) {
