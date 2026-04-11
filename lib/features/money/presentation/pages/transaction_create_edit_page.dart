@@ -5,13 +5,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:track/core/extensions/context_extensions.dart';
 import 'package:track/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:track/features/auth/presentation/bloc/auth_state.dart';
+import 'package:track/features/money/domain/entities/account_entity.dart';
 import 'package:track/features/money/domain/entities/category_entity.dart';
 import 'package:track/features/money/domain/entities/transaction_entity.dart';
 import 'package:track/features/money/presentation/bloc/transaction_form_bloc.dart';
 import 'package:track/features/money/presentation/bloc/transaction_form_event.dart';
 import 'package:track/features/money/presentation/bloc/transaction_form_state.dart';
-import 'package:track/features/money/presentation/widgets/account_picker_grid.dart';
-import 'package:track/features/money/presentation/widgets/category_picker_grid.dart';
+import 'package:track/features/money/presentation/utils/money_icon_resolver.dart';
+import 'package:track/features/money/presentation/widgets/account_picker_sheet.dart';
+import 'package:track/features/money/presentation/widgets/category_picker_sheet.dart';
 import 'package:track/features/money/presentation/widgets/transaction_type_toggle.dart';
 import 'package:track/injection.dart';
 
@@ -164,10 +166,26 @@ class _AmountField extends StatelessWidget {
     return BlocSelector<
       TransactionFormBloc,
       TransactionFormState,
-      TransactionType
+      (TransactionType, String)
     >(
-      selector: (state) => state.type,
-      builder: (context, type) {
+      selector: (state) {
+        final account =
+            state.availableAccounts
+                .where((a) => a.id == state.accountId)
+                .firstOrNull;
+        final currencyCode = account?.currency;
+        final currency =
+            currencyCode != null
+                ? state.availableCurrencies
+                    .where((c) => c.code == currencyCode)
+                    .firstOrNull
+                : state.availableCurrencies
+                    .where((c) => c.isDefault)
+                    .firstOrNull;
+        return (state.type, currency?.symbol ?? r'$');
+      },
+      builder: (context, data) {
+        final (type, currencySymbol) = data;
         final isIncome = type == TransactionType.income;
         final accentColor =
             isIncome ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
@@ -186,7 +204,7 @@ class _AmountField extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  r'$',
+                  currencySymbol,
                   style: textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w300,
                     color: colorScheme.onSurface.withValues(alpha: 0.4),
@@ -275,39 +293,122 @@ class _CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = context.textTheme;
     final colorScheme = context.colorScheme;
+    final textTheme = context.textTheme;
 
     return BlocSelector<
       TransactionFormBloc,
       TransactionFormState,
-      (List<CategoryEntity>, int?, TransactionType)
+      (List<CategoryEntity>, int?, CategoryEntity?)
     >(
-      selector:
-          (state) => (
-            TransactionFormBloc.filteredCategories(state),
-            state.categoryId,
-            state.type,
-          ),
+      selector: (state) {
+        final filtered = TransactionFormBloc.filteredCategories(state);
+        final selectedId = state.categoryId;
+        final selected =
+            selectedId != null
+                ? filtered.where((c) => c.id == selectedId).firstOrNull
+                : null;
+        return (filtered, selectedId, selected);
+      },
       builder: (context, data) {
-        final (categories, selectedId, _) = data;
-        if (categories.isEmpty) {
-          return Text(
-            'No categories available',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.5),
+        final (categories, selectedId, selectedCategory) = data;
+
+        return GestureDetector(
+          onTap:
+              categories.isEmpty
+                  ? null
+                  : () {
+                    FocusScope.of(context).unfocus();
+                    showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder:
+                          (_) => CategoryPickerSheet(
+                            categories: categories,
+                            selectedId: selectedId,
+                            onSelected:
+                                (id) => context.read<TransactionFormBloc>().add(
+                                  TransactionFormEvent.categorySelected(
+                                    categoryId: id,
+                                  ),
+                                ),
+                          ),
+                    );
+                  },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
             ),
-          );
-        }
-        return CategoryPickerGrid(
-          categories: categories,
-          selectedId: selectedId,
-          onSelected:
-              (id) => context.read<TransactionFormBloc>().add(
-                TransactionFormEvent.categorySelected(categoryId: id),
-              ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.grid_view_rounded,
+                  size: 22,
+                  color:
+                      selectedCategory != null
+                          ? colorScheme.primary
+                          : colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child:
+                      selectedCategory == null
+                          ? Text(
+                            'Select category',
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurface.withValues(
+                                alpha: 0.4,
+                              ),
+                            ),
+                          )
+                          : _CategoryChip(category: selectedCategory),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+              ],
+            ),
+          ),
         );
       },
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({required this.category});
+
+  final CategoryEntity category;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _parseColor(category.colorHex);
+    final textTheme = context.textTheme;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          child: Icon(
+            resolveMoneyIcon(category.iconName),
+            size: 14,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          category.name,
+          style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+        ),
+      ],
     );
   }
 }
@@ -317,18 +418,26 @@ class _AccountSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = context.textTheme;
     final colorScheme = context.colorScheme;
+    final textTheme = context.textTheme;
 
     return BlocSelector<
       TransactionFormBloc,
       TransactionFormState,
-      (List<dynamic>, int?)
+      (List<AccountEntity>, int?, AccountEntity?)
     >(
-      selector: (state) => (state.availableAccounts, state.accountId),
+      selector: (state) {
+        final accounts = List<AccountEntity>.from(state.availableAccounts);
+        final selectedId = state.accountId;
+        final selected =
+            selectedId != null
+                ? accounts.where((a) => a.id == selectedId).firstOrNull
+                : null;
+        return (accounts, selectedId, selected);
+      },
       builder: (context, data) {
-        final accounts = data.$1;
-        final selectedId = data.$2;
+        final (accounts, selectedId, selectedAccount) = data;
+
         if (accounts.isEmpty) {
           return Text(
             'Loading accounts...',
@@ -337,15 +446,98 @@ class _AccountSection extends StatelessWidget {
             ),
           );
         }
-        return AccountPickerGrid(
-          accounts: accounts.cast(),
-          selectedId: selectedId,
-          onSelected:
-              (id) => context.read<TransactionFormBloc>().add(
-                TransactionFormEvent.accountSelected(accountId: id),
-              ),
+
+        return GestureDetector(
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder:
+                  (_) => AccountPickerSheet(
+                    accounts: accounts,
+                    selectedId: selectedId,
+                    onSelected:
+                        (id) => context.read<TransactionFormBloc>().add(
+                          TransactionFormEvent.accountSelected(accountId: id),
+                        ),
+                  ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.account_balance_wallet_rounded,
+                  size: 22,
+                  color:
+                      selectedAccount != null
+                          ? colorScheme.primary
+                          : colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child:
+                      selectedAccount == null
+                          ? Text(
+                            'Select account',
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurface.withValues(
+                                alpha: 0.4,
+                              ),
+                            ),
+                          )
+                          : _AccountChip(account: selectedAccount),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+              ],
+            ),
+          ),
         );
       },
+    );
+  }
+}
+
+class _AccountChip extends StatelessWidget {
+  const _AccountChip({required this.account});
+
+  final AccountEntity account;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _parseColor(account.colorHex);
+    final textTheme = context.textTheme;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          child: Icon(
+            resolveMoneyIcon(account.iconName),
+            size: 14,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          account.name,
+          style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+        ),
+      ],
     );
   }
 }
@@ -465,4 +657,9 @@ class _NoteField extends StatelessWidget {
           ),
     );
   }
+}
+
+Color _parseColor(String hex) {
+  final cleaned = hex.replaceFirst('#', '');
+  return Color(int.parse('FF$cleaned', radix: 16));
 }

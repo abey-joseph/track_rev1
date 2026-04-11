@@ -5,6 +5,7 @@ import 'package:track/features/money/domain/entities/transaction_entity.dart';
 import 'package:track/features/money/domain/usecases/create_transaction.dart';
 import 'package:track/features/money/domain/usecases/get_accounts.dart';
 import 'package:track/features/money/domain/usecases/get_categories.dart';
+import 'package:track/features/money/domain/usecases/watch_currencies.dart';
 import 'package:track/features/money/presentation/bloc/transaction_form_event.dart';
 import 'package:track/features/money/presentation/bloc/transaction_form_state.dart';
 
@@ -15,6 +16,7 @@ class TransactionFormBloc
     this._createTransaction,
     this._getAccounts,
     this._getCategories,
+    this._watchCurrencies,
   ) : super(const TransactionFormState()) {
     on<TransactionFormInitialized>(_onInitialized);
     on<TransactionFormTypeChanged>(_onTypeChanged);
@@ -30,25 +32,27 @@ class TransactionFormBloc
   final CreateTransaction _createTransaction;
   final GetAccounts _getAccounts;
   final GetCategories _getCategories;
+  final WatchCurrencies _watchCurrencies;
 
   Future<void> _onInitialized(
     TransactionFormInitialized event,
     Emitter<TransactionFormState> emit,
   ) async {
-    final accountsResult = await _getAccounts(
-      UserIdParams(userId: event.userId),
-    );
-    final categoriesResult = await _getCategories(
-      UserIdParams(userId: event.userId),
-    );
+    final params = UserIdParams(userId: event.userId);
+
+    final accountsResult = await _getAccounts(params);
+    final categoriesResult = await _getCategories(params);
+    final currenciesResult = await _watchCurrencies(params).first;
 
     final accounts = accountsResult.getOrElse((_) => []);
     final categories = categoriesResult.getOrElse((_) => []);
+    final currencies = currenciesResult.getOrElse((_) => []);
 
     emit(
       state.copyWith(
         availableAccounts: accounts,
         allCategories: categories,
+        availableCurrencies: currencies,
         accountId: accounts.isNotEmpty ? accounts.first.id : null,
         date: DateTime.now(),
       ),
