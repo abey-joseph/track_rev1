@@ -2,6 +2,36 @@
 
 > Full architecture reference, templates, and decision log: see `PROJECT_BIBLE.md`
 
+## Context Index (read lazily)
+
+Each section below has a per-section `CONTEXT.md` with its purpose, key files, public surface (repo methods, use cases, BLoC events/state), and gotchas. **Do not read all of them up front.** Read only the ones relevant to the current task. Names and routes are already in the file paths — `find` / `grep` first, open a `CONTEXT.md` only when you need orientation for that section.
+
+| Section | Path | Covers |
+|---|---|---|
+| core | `lib/core/CONTEXT.md` | Drift DB (schema v7), DI, router + auth guard, theme, failures/exceptions, usecase base, network, logger, widgets, env, constants |
+| auth | `lib/features/auth/CONTEXT.md` | Firebase auth (email / Google / anon), `AuthRepository`, `AuthBloc`, splash + login |
+| habits | `lib/features/habits/CONTEXT.md` | Habit entity + logs + streaks, `HabitsBloc` (optimistic), habit form, pages + widgets |
+| home | `lib/features/home/CONTEXT.md` | `AppShellPage` (tabs + FAB), `DashboardPage`, dashboard widgets — no domain/data |
+| insights | `lib/features/insights/CONTEXT.md` | Insight entity (currently skeleton pages only, no repo/bloc) |
+| money | `lib/features/money/CONTEXT.md` | Transactions, accounts, categories, currencies, recurring, budgets; many sub-BLoCs |
+| settings | `lib/features/settings/CONTEXT.md` | Settings entity + pages (no bloc/repo yet) |
+
+### `CONTEXT.md` update rule (scoped)
+
+Update a section's `CONTEXT.md` only when **any** of the following change in that section:
+
+- **Public surface** — a repository method added/renamed/removed, a use case added/renamed/removed.
+- **Public entity shape** — adding/removing fields on entities exported from `domain/`, adding/removing enum variants on public enums.
+- **BLoC contract** — new event variants, new state variants, or a new BLoC file.
+- **File layout** — new/removed page, new/removed top-level folder under the section, a file moves between `domain/`, `data/`, or `presentation/`.
+- **Non-obvious behaviour** — a gotcha that a future contributor would benefit from knowing (concurrency, optimistic updates, schema migrations, cross-feature coupling).
+
+Do **not** update `CONTEXT.md` for: widget internals, private helpers, bug fixes that don't change the surface, formatting, or import reorders. Be terse — each section targets ~150–400 tokens. If the bullet is obvious from file names, drop it.
+
+When you add a **new top-level section** under `lib/features/`, create a `CONTEXT.md` in it and add a row to the table above in this file and in `AGENTS.md`.
+
+---
+
 ## Quick Reference
 
 - **Architecture:** Clean Architecture (presentation → domain → data)
